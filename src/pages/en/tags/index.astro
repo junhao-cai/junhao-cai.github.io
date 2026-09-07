@@ -1,0 +1,34 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { publishedPosts, collectTags } from '../../../lib/tags';
+import { url } from '../../../lib/url';
+import { useT } from '../../../i18n';
+
+const lang = 'en';
+const t = useT(lang);
+const posts = publishedPosts(await getCollection('posts'), lang);
+const tags = collectTags(posts);
+---
+
+<BaseLayout title={t('tags.title')} description="Browse notes by tag." wide>
+  <header class="post-head">
+    <h1>{t('tags.title')}</h1>
+    <p class="muted" style="margin:.4rem 0 0">{tags.length} tags · {posts.length} posts</p>
+  </header>
+
+  {
+    tags.length === 0 ? (
+      <div class="empty-state">{t('tags.empty')}</div>
+    ) : (
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+        {tags.map((tag) => (
+          <a class="chip chip--accent" href={url(`/en/tags/${tag.slug}/`)} style="padding:.4rem .75rem;font-size:.9rem">
+            {tag.raw}
+            <span class="chip__count" style="color:var(--c-accent)">{tag.count}</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>

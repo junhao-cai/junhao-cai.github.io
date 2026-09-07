@@ -1,0 +1,50 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostItem from '../../components/PostItem.astro';
+import { publishedPosts, collectTags, postsOfTag } from '../../lib/tags';
+import { url } from '../../lib/url';
+import { getLangFromUrl, useT, withLang } from '../../i18n';
+
+export const getStaticPaths = (async () => {
+  // 中文站只列中文笔记的标签；英文站（/en/tags/…）由 en/ 下的同名页面生成
+  const posts = publishedPosts(await getCollection('posts'), 'zh');
+  return collectTags(posts).map((tag) => ({
+    params: { tag: tag.slug },
+    props: { tag, posts: postsOfTag(posts, tag.slug) },
+  }));
+}) satisfies GetStaticPaths;
+
+const { tag, posts } = Astro.props;
+const lang = getLangFromUrl(Astro.url);
+const t = useT(lang);
+---
+
+<BaseLayout
+  title={`#${tag.raw}`}
+  description={lang === 'en'
+    ? `${tag.count} posts tagged "${tag.raw}".`
+    : `标签 ${tag.raw} 下的 ${tag.count} 篇文章。`}
+  wide
+>
+  <header class="post-head">
+    <p class="muted small" style="margin:0"><a href={url(withLang('/tags/', lang))}>← {t('tags.title')}</a></p>
+    <h1>#{tag.raw}</h1>
+    <p class="muted" style="margin:.4rem 0 0">{t('pub.count', tag.count)}</p>
+  </header>
+
+  {
+    posts.length === 0 ? (
+      <div class="empty-state">{lang === 'en' ? 'No posts under this tag.' : '该标签下暂无文章。'}</div>
+    ) : (
+      <ul class="post-list">
+        {posts.map((p) => (
+          <li>
+            <PostItem post={p} showTags={false} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</BaseLayout>

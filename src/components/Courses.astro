@@ -1,0 +1,112 @@
+---
+import type { CourseItem } from '../data/cv';
+import type { Lang } from '../i18n';
+import { parseTerm, semesterKey, formatSemester, keyToSemester } from '../lib/semester';
+
+interface Props {
+  items: readonly CourseItem[];
+  lang: Lang;
+  /** 简历页（默认）：按课程聚合，首栏列出多个开课学期 */
+  compact?: boolean;
+  /** 首页：按学期聚合，展示最近两个学期 */
+  semesterGroups?: boolean;
+}
+const { items = [], lang = 'zh', compact = false, semesterGroups = false } = Astro.props;
+
+const sep = lang === 'en' ? ', ' : '、';
+
+function latestKey(terms: string[]): number {
+  let k = -1;
+  for (const term of terms) {
+    const s = parseTerm(term);
+    if (s) k = Math.max(k, semesterKey(s));
+  }
+  return k;
+}
+
+// 按课程名聚合（防御性合并同名条目）
+const byName = new Map<string, CourseItem>();
+for (const c of items) {
+  const prev = byName.get(c.name);
+  if (prev) prev.terms = [...new Set([...prev.terms, ...c.terms])];
+  else byName.set(c.name, { ...c, terms: [...c.terms] });
+}
+const merged = [...byName.values()].sort((a, b) => latestKey(b.terms) - latestKey(a.terms));
+
+// 首页：取数据中最近的两个学期，按学期分组
+const presentKeys = [
+  ...new Set(
+    items
+      .flatMap((c) => c.terms.map(parseTerm))
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .map(semesterKey),
+  ),
+].sort((a, b) => b - a);
+
+const shown = new Set<string>();
+const groups = presentKeys.slice(0, 2).map((k) => {
+  const target = keyToSemester(k);
+  const list = items.filter((c) => {
+    const hit = c.terms.some((term) => {
+      const s = parseTerm(term);
+      return s !== null && semesterKey(s) === k;
+    });
+    if (hit && !shown.has(c.name)) {
+      shown.add(c.name);
+      return true;
+    }
+    return false;
+  });
+  return { key: k, target, list };
+});
+---
+
+{
+  semesterGroups ? (
+    groups.some((g) => g.list.length > 0) ? (
+      <div class="course-groups">
+        {groups.map((g) => (
+          g.list.length > 0 && (
+            <div class="course-term-group">
+              <h3 class="course-term-group__title">{formatSemester(g.target, lang)}</h3>
+              <ul class="timeline">
+                {g.list.map((c) => (
+                  <li>
+                    <div class="timeline__period" />
+                    <div>
+                      <div class="timeline__title">
+                        {c.name}
+                        <span class="chip chip--accent course-level">{c.level}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        ))}
+      </div>
+    ) : null
+  ) : (
+    merged.length === 0 ? null : (
+      <ul class="timeline">
+        {merged.map((c) => (
+          <li>
+            <div class="timeline__period">
+              {c.terms.slice().sort((a, b) => latestKey([b]) - latestKey([a])).join(sep)}
+            </div>
+            <div>
+              <div class="timeline__title">
+                {c.name}
+                <span class="chip chip--accent course-level">{c.level}</span>
+              </div>
+              {!compact && c.description && (
+                <div class="timeline__detail">{c.description}</div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
+  )
+}

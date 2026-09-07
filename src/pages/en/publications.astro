@@ -1,0 +1,246 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicationItem from '../../components/PublicationItem.astro';
+import { PUBLICATIONS, PUBLICATIONS_YEARS, publicationTags, isSelfAuthor, selfIsCorresponding } from '../../lib/publications';
+import { formatCitation } from '../../lib/bibtex';
+import { profile } from '../../site.config';
+import { url } from '../../lib/url';
+import { useT } from '../../i18n';
+
+const lang = 'en';
+const t = useT(lang);
+const p = profile(lang);
+
+const years = PUBLICATIONS_YEARS;
+const tags = publicationTags();
+const selfFirstCount = PUBLICATIONS.filter((e) => e.authors[0] && isSelfAuthor(e.authors[0])).length;
+const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
+
+---
+
+<BaseLayout
+  title={t('pub.title')}
+  description={`Publications of ${p.name} — ${PUBLICATIONS.length} in total.`}
+  wide
+>
+  <header class="post-head">
+    <h1>{t('pub.title')}</h1>
+    <div class="post-meta">
+      <button class="chip" type="button" data-stat="all" aria-pressed="true">
+        {t('pub.statsTotal')} <strong style="color:var(--c-text)">{PUBLICATIONS.length}</strong>
+      </button>
+      <button class="chip" type="button" data-stat="first" aria-pressed="false">
+        {t('pub.statsFirst')} <strong style="color:var(--c-text)">{selfFirstCount}</strong>
+      </button>
+      <button class="chip" type="button" data-stat="corr" aria-pressed="false">
+        {t('pub.statsCorr')} <strong style="color:var(--c-text)">{selfCorrCount}</strong>
+      </button>
+      <a class="chip" href={url('/cv.bib')} download>{t('cv.downloadBib')}</a>
+    </div>
+  </header>
+
+  {
+    (years.length > 0 || tags.length > 0) && (
+      <div class="pub-filter" id="pub-filter" style="margin-bottom:1.5rem">
+        {
+          years.length > 0 && (
+            <div class="pub-filter__group">
+              <span class="pub-filter__label">{t('pub.filterYear')}</span>
+              <div style="display:flex;flex-wrap:wrap;gap:.45rem">
+                <button class="chip" type="button" data-year="" aria-pressed="true">
+                  {t('pub.filterAll')}
+                </button>
+                {years.map((y) => (
+                  <button class="chip" type="button" data-year={y} aria-pressed="false">
+                    {y}
+                    <span class="chip__count">
+                      {PUBLICATIONS.filter((e) => e.year === y).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        {
+          tags.length > 0 && (
+            <div class="pub-filter__group">
+              <span class="pub-filter__label">{t('pub.filterTag')}</span>
+              <div style="display:flex;flex-wrap:wrap;gap:.45rem">
+                <button class="chip" type="button" data-tag="" aria-pressed="true">
+                  {t('pub.filterAll')}
+                </button>
+                {tags.map((tag) => (
+                  <button class="chip" type="button" data-tag={tag.tag} aria-pressed="false">
+                    {tag.tag}
+                    <span class="chip__count">{tag.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        <p class="pub-filter__hint muted small">{t('pub.multiHint')}</p>
+      </div>
+    )
+  }
+
+  {
+    PUBLICATIONS.length === 0 ? (
+      <div class="empty-state">{t('pub.none')}</div>
+    ) : (
+      years.map((year) => {
+        const items = PUBLICATIONS.filter((e) => e.year === year);
+        return (
+          <section class="section" style="margin-top:2rem" data-year-group data-year={year}>
+            <div class="section__head">
+              <h2 class="section__title">{year}</h2>
+              <span class="section__more muted">{t('pub.count', items.length)}</span>
+            </div>
+            <div>
+              {items.map((e) => (
+                <PublicationItem entry={e} />
+              ))}
+            </div>
+          </section>
+        );
+      })
+    )
+  }
+
+  <div id="multi-hint" class="floating-hint" role="status">{t('pub.multiHint')}</div>
+
+  <script is:inline>
+    (() => {
+      const filter = document.getElementById('pub-filter');
+      const statChips = [...document.querySelectorAll('button[data-stat]')];
+      const yearChips = filter ? [...filter.querySelectorAll('button[data-year]')] : [];
+      const tagChips = filter ? [...filter.querySelectorAll('button[data-tag]')] : [];
+      const groups = [...document.querySelectorAll('[data-year-group]')];
+      if (!groups.length) return;
+
+      const params = new URLSearchParams(location.search);
+      const selYears = new Set();
+      const selTags = new Set();
+      let selStat = params.get('stat') || 'all';
+      const single = params.get('tag');
+      if (single) selTags.add(single);
+      else (params.get('tags') || '').split('|').filter(Boolean).forEach((t) => selTags.add(t));
+      (params.get('year') || '').split('|').filter(Boolean).forEach((y) => selYears.add(y));
+      (params.get('years') || '').split('|').filter(Boolean).forEach((y) => selYears.add(y));
+
+      const matchYear = (yr) => selYears.size === 0 || selYears.has(String(yr));
+      const matchTag = (tg) => selTags.size === 0 || String(tg).split('|').some((t) => selTags.has(t));
+      const matchStat = (a) => {
+        if (selStat === 'all') return true;
+        if (selStat === 'first') return a.dataset.firstAuthor === 'true';
+        if (selStat === 'corr') return a.dataset.corresponding === 'true';
+        return true;
+      };
+
+      const apply = () => {
+        for (const c of statChips) {
+          const v = c.dataset.stat || 'all';
+          c.setAttribute('aria-pressed', String(v === selStat));
+        }
+        for (const c of yearChips) {
+          const v = c.dataset.year || '';
+          c.setAttribute('aria-pressed', String(v === '' ? selYears.size === 0 : selYears.has(v)));
+        }
+        for (const c of tagChips) {
+          const v = c.dataset.tag || '';
+          c.setAttribute('aria-pressed', String(v === '' ? selTags.size === 0 : selTags.has(v)));
+        }
+        for (const g of groups) {
+          let shown = 0;
+          for (const a of g.querySelectorAll('[data-tags]')) {
+            const yr = a.dataset.year || '';
+            const ok = matchYear(yr) && matchTag(a.dataset.tags || '') && matchStat(a);
+            a.style.display = ok ? '' : 'none';
+            if (ok) shown++;
+          }
+          g.style.display = shown ? '' : 'none';
+        }
+        const u = new URL(location.href);
+        u.searchParams.delete('stat');
+        if (selStat !== 'all') u.searchParams.set('stat', selStat);
+        const sync = (multiKey, set, singleKey) => {
+          u.searchParams.delete(multiKey);
+          u.searchParams.delete(singleKey);
+          if (set.size === 1) u.searchParams.set(singleKey, [...set][0]);
+          else if (set.size > 1) u.searchParams.set(multiKey, [...set].join('|'));
+        };
+        sync('tags', selTags, 'tag');
+        sync('years', selYears, 'year');
+        history.replaceState(null, '', u);
+      };
+
+      const toggle = (set, value, multi) => {
+        if (value === '') { set.clear(); return; }
+        if (multi) {
+          if (set.has(value)) set.delete(value);
+          else set.add(value);
+        } else {
+          if (set.has(value)) set.clear();
+          else { set.clear(); set.add(value); }
+        }
+      };
+
+      for (const c of statChips) {
+        c.addEventListener('click', () => {
+          selStat = c.dataset.stat || 'all';
+          apply();
+        });
+      }
+      for (const c of yearChips) {
+        c.addEventListener('click', (e) => {
+          toggle(selYears, c.dataset.year || '', e.ctrlKey || e.metaKey);
+          apply();
+        });
+      }
+      for (const c of tagChips) {
+        c.addEventListener('click', (e) => {
+          toggle(selTags, c.dataset.tag || '', e.ctrlKey || e.metaKey);
+          apply();
+        });
+      }
+
+      const hint = document.getElementById('multi-hint');
+      if (hint) {
+        let active = false;
+        const move = (e) => {
+          if (!active) return;
+          hint.style.left = e.clientX + 14 + 'px';
+          hint.style.top = e.clientY + 14 + 'px';
+        };
+        window.addEventListener('keydown', (e) => {
+          if (e.ctrlKey || e.metaKey) { active = true; hint.style.display = 'block'; }
+        });
+        window.addEventListener('keyup', (e) => {
+          if (!e.ctrlKey && !e.metaKey) { active = false; hint.style.display = 'none'; }
+        });
+        window.addEventListener('mousemove', move);
+      }
+
+      apply();
+    })();
+  </script>
+
+  <p class="muted small" style="margin-top:2.5rem">
+    {t('pub.seeCv')} <a href={url('/en/cv/')}>{t('pub.cvPage')}</a>; {t('pub.citeExample')}
+  </p>
+  {
+    PUBLICATIONS.some((e) => e.corresponding.length > 0) && (
+      <p class="small" style="color:var(--c-text-soft);margin-top:.4rem">
+        <sup class="corr">†</sup> {t('pub.corrNote')}
+      </p>
+    )
+  }
+  {
+    PUBLICATIONS[0] && (
+      <p class="small" style="color:var(--c-text-soft)">
+        {formatCitation(PUBLICATIONS[0], 'apa')}
+      </p>
+    )
+  }
+</BaseLayout>

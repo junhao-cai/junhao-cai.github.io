@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { url } from '../lib/url';
+
+/**
+ * 404 页双语并列：静态托管（GitHub Pages 等）只认根目录 /404.html，
+ * 无论访客来自中文站还是 /en/ 都会看到本页，因此两种语言都给出。
+ */
+---
+
+<BaseLayout title="页面未找到 · Page not found" description="404 Not Found" noIndex>
+  <div style="text-align:center;padding:4rem 1rem">
+    <p class="muted" style="font-size:3rem;font-weight:200;margin:0">404</p>
+    <h1>页面未找到 · Page not found</h1>
+    <p class="muted">
+      你访问的链接可能已经过期，或被移动到了别处。<br />
+      This address does not exist — the link may be outdated or mistyped.
+    </p>
+    <p style="margin-top:1.5rem;display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn--primary" href={url('/')}>返回首页</a>
+      <a class="btn" href={url('/en/')}>Back to home</a>
+    </p>
+  </div>
+</BaseLayout>

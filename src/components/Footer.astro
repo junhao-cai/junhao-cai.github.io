@@ -1,0 +1,23 @@
+---
+import { SITE } from '../site.config';
+import { url } from '../lib/url';
+import { getLangFromUrl, useT, withLang } from '../i18n';
+import Icon from './Icon.astro';
+
+const t = useT(getLangFromUrl(Astro.url));
+const year = new Date().getFullYear();
+const range = year > SITE.sinceYear ? `${SITE.sinceYear}–${year}` : `${SITE.sinceYear}`;
+---
+
+<footer class="site-footer">
+  <div class="wrap site-footer__inner">
+    <span>© {range} {SITE.title.split('·')[0].trim()} · {t('footer.builtWith')}</span>
+    <span style="display:inline-flex;gap:0.9rem;align-items:center">
+      <a href={url('/rss.xml')} title={t('footer.rss')} style="display:inline-flex;align-items:center;gap:.3rem">
+        <Icon name="rss" size={14} /> RSS
+      </a>
+      <a href={url(withLang('/publications', getLangFromUrl(Astro.url)))}>{t('nav.publications')}</a>
+      <a href={url(withLang('/about', getLangFromUrl(Astro.url)))}>{t('nav.about')}</a>
+    </span>
+  </div>
+</footer>

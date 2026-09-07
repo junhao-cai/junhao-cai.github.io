@@ -1,0 +1,132 @@
+---
+import { ENABLE_SEARCH } from '../site.config';
+import { getLangFromUrl, useT } from '../i18n';
+import Icon from './Icon.astro';
+
+const t = useT(getLangFromUrl(Astro.url));
+// is:inline 脚本不经过 Vite 处理，import.meta 不可用——在 frontmatter 先算好 pagefind 地址
+const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
+---
+
+{
+  ENABLE_SEARCH && (
+    <dialog id="search-modal" class="search-modal" aria-label={t('search.title')}>
+      <div class="search-modal__bar">
+        <Icon name="search" size={16} />
+        <input
+          id="search-input"
+          type="text"
+          placeholder={t('search.placeholder')}
+          autocomplete="off"
+          spellcheck="false"
+          aria-label={t('search.title')}
+        />
+        <kbd class="search-trigger__kbd">Esc</kbd>
+      </div>
+      <div id="search-results" class="search-modal__results">
+        <div class="search-modal__hint">{t('search.empty')}</div>
+      </div>
+    </dialog>
+  )
+}
+
+<script
+  is:inline
+  define:vars={{
+    empty: t('search.empty'),
+    noResult: t('search.noResult'),
+    indexMissing:
+      t('search.indexMissing') +
+      ': npm run build && npm run postbuild:search',
+    pfUrl,
+  }}
+>
+  window.__SEARCH_I18N__ = { empty, noResult, indexMissing, pfUrl };
+</script>
+
+<script is:inline>
+  (() => {
+    const modal = document.getElementById('search-modal');
+    const trigger = document.getElementById('search-trigger');
+    const input = document.getElementById('search-input');
+    const box = document.getElementById('search-results');
+    if (!modal || !trigger || !input || !box) return;
+
+    const MSG = window.__SEARCH_I18N__ || {};
+    let pagefind; // undefined = 未加载, null = 加载失败
+    async function pf() {
+      if (pagefind !== undefined) return pagefind;
+      try {
+        pagefind = await import(MSG.pfUrl);
+      } catch {
+        pagefind = null;
+      }
+      return pagefind;
+    }
+
+    function hint(msg) {
+      box.innerHTML = '<div class="search-modal__hint"></div>';
+      box.firstElementChild.textContent = msg;
+    }
+
+    async function run(q) {
+      const lib = await pf();
+      if (!lib) {
+        hint(MSG.indexMissing);
+        return;
+      }
+      if (!q) {
+        hint(MSG.empty);
+        return;
+      }
+      const res = await lib.search(q);
+      if (!res.results.length) {
+        hint(MSG.noResult);
+        return;
+      }
+      const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()));
+      box.innerHTML = items
+        .map((d) => {
+          const title = (d.meta && d.meta.title) || d.url;
+          return (
+            '<a class="search-hit" href="' + d.url + '">' +
+            '<div class="search-hit__title">' + title + '</div>' +
+            (d.excerpt ? '<div class="search-hit__excerpt">' + d.excerpt + '</div>' : '') +
+            '</a>'
+          );
+        })
+        .join('');
+    }
+
+    function open() {
+      modal.showModal();
+      input.focus();
+      input.select();
+    }
+
+    trigger.addEventListener('click', open);
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        modal.open ? modal.close() : open();
+      }
+    });
+
+    let timer;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => run(input.value.trim()), 120);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const first = box.querySelector('a.search-hit');
+      if (first) {
+        modal.close();
+        first.click();
+      }
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.close();
+    });
+  })();
+</script>

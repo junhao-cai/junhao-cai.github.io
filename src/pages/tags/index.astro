@@ -1,0 +1,38 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { publishedPosts, collectTags } from '../../lib/tags';
+import { url } from '../../lib/url';
+import { getLangFromUrl, useT, withLang } from '../../i18n';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useT(lang);
+const posts = publishedPosts(await getCollection('posts'), lang);
+const tags = collectTags(posts);
+---
+
+<BaseLayout title={t('tags.title')} description={lang === 'en' ? 'Browse notes by tag.' : '按标签筛选笔记与论文。'} wide>
+  <header class="post-head">
+    <h1>{t('tags.title')}</h1>
+    <p class="muted" style="margin:.4rem 0 0">
+      {lang === 'en'
+        ? `${tags.length} tags · ${posts.length} posts`
+        : `${tags.length} 个标签 · ${posts.length} 篇文章`}
+    </p>
+  </header>
+
+  {
+    tags.length === 0 ? (
+      <div class="empty-state">{t('tags.empty')}</div>
+    ) : (
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+        {tags.map((tag) => (
+          <a class="chip chip--accent" href={url(withLang(`/tags/${tag.slug}/`, lang))} style="padding:.4rem .75rem;font-size:.9rem">
+            {tag.raw}
+            <span class="chip__count" style="color:var(--c-accent)">{tag.count}</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>

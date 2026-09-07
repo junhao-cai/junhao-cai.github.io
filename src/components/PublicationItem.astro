@@ -1,0 +1,129 @@
+---
+import Icon from './Icon.astro';
+import { linkFor, isSelfAuthor, isCorrespondingAuthor, selfIsCorresponding, type Entry } from '../lib/publications';
+import { formatCitation } from '../lib/bibtex';
+import { getLangFromUrl, useT } from '../i18n';
+
+interface Props {
+  entry: Entry;
+  /** 默认展开摘要 */
+  open?: boolean;
+  /** 卡片形态（首页精选论文用），默认为列表行形态 */
+  card?: boolean;
+}
+const { entry: e, open = false, card = false } = Astro.props;
+const t = useT(getLangFromUrl(Astro.url));
+
+const href = linkFor(e);
+const authorsHtml = e.authors
+  .map((a) => {
+    const name = [a.first, a.last].filter(Boolean).join(' ');
+    const cls = isSelfAuthor(a) ? 'self' : '';
+    const corr = isCorrespondingAuthor(a, e.corresponding) ? '<sup class="corr" title="通讯作者">†</sup>' : '';
+    return cls ? `<span class="${cls}">${name}</span>${corr}` : `${name}${corr}`;
+  })
+  .join(', ');
+
+const typeLabels: Record<string, string> = {
+  journal: t('pub.typeJournal'),
+  conference: t('pub.typeConference'),
+  preprint: t('pub.typePreprint'),
+  chapter: t('pub.typeChapter'),
+  book: t('pub.typeBook'),
+  thesis: t('pub.typeThesis'),
+  other: t('pub.typeOther'),
+};
+
+/** 引用文本去掉 markdown 强调记号，保证阅读与复制都是干净纯文本 */
+const plain = (s: string) => s.replace(/\*([^*]+)\*/g, '$1');
+const citeApa = plain(formatCitation(e, 'apa'));
+const citeIeee = plain(formatCitation(e, 'ieee'));
+const citeMla = plain(formatCitation(e, 'mla'));
+const isFirstAuthor = e.authors[0] ? isSelfAuthor(e.authors[0]) : false;
+const isCorrAuthor = selfIsCorresponding(e);
+---
+
+<article class:list={['pub', card && 'pub--card']} data-tags={e.tags.join('|')} data-year={e.year ?? ''} data-first-author={isFirstAuthor} data-corresponding={isCorrAuthor}>
+  <div>
+    <h3 class="pub__title">
+      {
+        href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer">{e.title}</a>
+        ) : (
+          e.title
+        )
+      }
+    </h3>
+
+    {authorsHtml && <div class="pub__authors" set:html={authorsHtml} />}
+
+    <div class="pub__venue">
+      {
+        [
+          e.venue,
+          e.volume ? `vol. ${e.volume}` : '',
+          e.number ? `no. ${e.number}` : '',
+          e.pages ? `pp. ${e.pages}` : '',
+          e.year ?? '',
+        ]
+          .filter(Boolean)
+          .join(', ')
+      }
+    </div>
+
+    {
+      (e.award || e.selected || e.note) && (
+        <div class="pub__badges">
+          {e.award && <span class="badge badge--award">{e.award}</span>}
+          {e.selected && <span class="badge badge--selected">{t('pub.selected')}</span>}
+          {e.note && <span class="badge">{e.note}</span>}
+          <span class="badge">{typeLabels[e.type] ?? e.type}</span>
+        </div>
+      )
+    }
+
+    {
+      e.abstract && (
+        <details class="pub__abstract-toggle" open={open}>
+          <summary class="muted small" style="cursor:pointer">{t('pub.abstract')}</summary>
+          <div class="pub__abstract" style="margin-top:.5rem">{e.abstract}</div>
+        </details>
+      )
+    }
+
+    <details class="cite">
+      <summary>{t('pub.cite')}</summary>
+      <div class="cite-tabs" role="group" aria-label={t('pub.cite')}>
+        <button type="button" class="is-active" data-cite-tab="apa">APA</button>
+        <button type="button" data-cite-tab="ieee">IEEE</button>
+        <button type="button" data-cite-tab="mla">MLA</button>
+      </div>
+      <div class="cite-body">
+        <div data-cite-text="apa">{citeApa}</div>
+        <div data-cite-text="ieee" hidden>{citeIeee}</div>
+        <div data-cite-text="mla" hidden>{citeMla}</div>
+      </div>
+      <button class="cite-copy" type="button" data-cite-copy>{t('pub.copyCite')}</button>
+    </details>
+
+    <details class="bibtex">
+      <summary>{t('pub.bibtex')}</summary>
+      <pre><code>{e.raw}</code></pre>
+    </details>
+  </div>
+
+  <div class="pub__links">
+    {e.pdf && <a href={e.pdf} target="_blank" rel="noopener">{t('pub.pdf')}</a>}
+    {e.code && <a href={e.code} target="_blank" rel="noopener">{t('pub.code')}</a>}
+    {e.slide && <a href={e.slide} target="_blank" rel="noopener">{t('pub.slides')}</a>}
+    {e.arxiv && <a href={`https://arxiv.org/abs/${e.arxiv}`} target="_blank" rel="noopener">arXiv</a>}
+    {
+      e.doi && (
+        <a href={`https://doi.org/${e.doi}`} target="_blank" rel="noopener">
+          DOI <Icon name="external" size={11} />
+        </a>
+      )
+    }
+    {!e.doi && e.url && <a href={e.url} target="_blank" rel="noopener">{t('pub.link')}</a>}
+  </div>
+</article>

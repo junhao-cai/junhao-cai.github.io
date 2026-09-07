@@ -1,0 +1,55 @@
+---
+/**
+ * 阅读辅助：顶部进度条 + 右下回到顶部。仅在文章详情页挂载。
+ */
+import { getLangFromUrl, useT } from '../i18n';
+const t = useT(getLangFromUrl(Astro.url));
+---
+
+<div class="read-progress" aria-hidden="true">
+  <div class="read-progress__bar" id="read-progress-bar"></div>
+</div>
+
+<button class="back-top" id="back-top" type="button" aria-label={t('post.backTop')} title={t('post.backTop')}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 19V5M5 12l7-7 7 7"></path>
+  </svg>
+</button>
+
+<script is:inline>
+  (() => {
+    const bar = document.getElementById('read-progress-bar');
+    const btn = document.getElementById('back-top');
+    if (!bar || !btn) return;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+      bar.style.width = (p * 100).toFixed(2) + '%';
+      btn.classList.toggle('is-show', window.scrollY > 600);
+    };
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true }
+    );
+    update();
+    btn.addEventListener('click', () => window.scrollTo(0, 0));
+  })();
+</script>

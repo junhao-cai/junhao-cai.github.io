@@ -1,0 +1,18 @@
+# 依赖与构建产物：在镜像内部重新安装/构建
+node_modules
+dist
+.astro
+
+# 版本控制与本地配置
+.git
+.github
+.env
+.env.*
+*.log
+
+# 工作区数据
+.workbuddy
+
+# 系统杂项
+.DS_Store
+Thumbs.db

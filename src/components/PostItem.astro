@@ -1,0 +1,44 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { url } from '../lib/url';
+import { tagSlug, postLang } from '../lib/tags';
+import { withLang } from '../i18n';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+  showTags?: boolean;
+}
+const { post, showTags = true } = Astro.props;
+
+// 按笔记语言生成链接：英文笔记 → /en/posts/<slug>/（去掉内容 id 的 en/ 前缀）
+const lang = postLang(post);
+const postHref = url(
+  lang === 'en'
+    ? `/en/posts/${post.id.replace(/^en\//, '')}/`
+    : `/posts/${post.id}/`
+);
+
+const dateStr = post.data.pubDate.toISOString().slice(0, 10);
+const dateLabel = `${post.data.pubDate.getFullYear()}-${String(post.data.pubDate.getMonth() + 1).padStart(2, '0')}`;
+---
+
+<div class="post-item">
+  <time class="post-item__date" datetime={dateStr}>{dateLabel}</time>
+  <div>
+    <a class="post-item__link" href={postHref}>
+      <div class="post-item__title">{post.data.title}</div>
+      {post.data.description && <div class="post-item__desc">{post.data.description}</div>}
+    </a>
+    {
+      showTags && post.data.tags.length > 0 && (
+        <div class="post-item__tags">
+          {post.data.tags.map((t) => (
+            <a class="chip" href={url(withLang(`/tags/${tagSlug(t)}/`, lang))} style="font-size:.76rem;padding:.1rem .5rem">
+              {t}
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</div>

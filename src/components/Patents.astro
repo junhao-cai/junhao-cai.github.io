@@ -1,0 +1,35 @@
+---
+import type { PatentItem } from '../data/cv';
+import type { Lang } from '../i18n';
+
+interface Props {
+  items: readonly PatentItem[];
+  lang: Lang;
+}
+const { items = [], lang = 'zh' } = Astro.props;
+
+const sep = lang === 'en' ? ', ' : '、';
+const inventorLabel = lang === 'en' ? 'Inventors: ' : '发明人：';
+const grantedLabel = lang === 'en' ? ' · Granted' : ' · 授权';
+---
+
+{
+  items.length === 0 ? null : (
+    <ul class="timeline">
+      {items.map((p) => (
+        <li>
+          <div class="timeline__period">{p.date}</div>
+          <div>
+            <div class="timeline__title">{p.title}</div>
+            <div class="timeline__subtitle">
+              {p.country} · {p.number}{p.granted ? grantedLabel : ''}
+            </div>
+            <div class="timeline__detail">
+              {inventorLabel}{p.inventors.join(sep)}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}

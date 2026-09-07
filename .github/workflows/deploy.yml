@@ -1,0 +1,71 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      # 根据仓库名推导 GitHub Pages 的真实地址与 base 路径：
+      #   用户/主页仓库  owner.github.io  → 站点在根  /               site https://owner.github.io/
+      #   项目仓库        owner/repo       → 站点在  /repo/           site https://owner.github.io/repo/
+      # 注意：必须用地域真实的 Pages URL，不能用仓库的 html_url（github.com/...），
+      # 否则 sitemap / RSS / canonical 会全部指向错误地址。
+      - name: Compute Pages config
+        id: pages
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          if [ "$REPO" = "${OWNER}.github.io" ]; then
+            echo "base=/" >> "$GITHUB_OUTPUT"
+            echo "site=https://${OWNER}.github.io/" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=/${REPO}/" >> "$GITHUB_OUTPUT"
+            echo "site=https://${OWNER}.github.io/${REPO}/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        run: npm run build
+        env:
+          SITE_URL: ${{ steps.pages.outputs.site }}
+          BASE_PATH: ${{ steps.pages.outputs.base }}
+
+      # Pagefind 资源路径由页面里的 import.meta.env.BASE_URL 前缀处理（见
+      # src/pages/search.astro 与 src/components/SearchModal.astro），这里只需
+      # 普通构建索引即可。注意 pagefind 1.5+ 已不支持 --base-url CLI 参数。
+      - name: Build search index
+        run: npm run postbuild:search
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

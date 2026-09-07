@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { url } from '../../lib/url';
+import { useT } from '../../i18n';
+
+const t = useT('en');
+---
+
+<BaseLayout title={t('notfound.title')} description="404 Not Found" noIndex>
+  <div style="text-align:center;padding:4rem 1rem">
+    <p class="muted" style="font-size:3rem;font-weight:200;margin:0">404</p>
+    <h1>{t('notfound.title')}</h1>
+    <p class="muted">{t('notfound.desc')}</p>
+    <p style="margin-top:1.5rem">
+      <a class="btn btn--primary" href={url('/en/')}>{t('notfound.home')}</a>
+    </p>
+  </div>
+</BaseLayout>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 132" role="img" aria-label="蔡君豪的卡通头像">
+  <title>蔡君豪 · 头像</title>
+  <defs>
+    <clipPath id="av-clip">
+      <circle cx="66" cy="66" r="65"/>
+    </clipPath>
+  </defs>
+
+  <circle cx="66" cy="66" r="65" fill="#e8eff8"/>
+  <circle cx="66" cy="66" r="65" fill="none" stroke="#1f4b8e" stroke-width="2.5"/>
+
+  <g clip-path="url(#av-clip)">
+    <circle cx="66" cy="58" r="23" fill="#f5c4b3"/>
+    <path d="M43 60c-2-19 10-28 23-28 13 0 24 8 23 27-4-12-10-16-16-17 2 4-2 7-7 7-9 0-18 4-23 11z" fill="#2c2c2a"/>
+    <path d="M42 58c1-4 3-7 5-9l-1 11zM90 58c-1-4-3-7-5-9l1 11z" fill="#2c2c2a"/>
+    <circle cx="58" cy="60" r="2.4" fill="#2c2c2a"/>
+    <circle cx="74" cy="60" r="2.4" fill="#2c2c2a"/>
+    <path d="M61 71q5 4 10 0" stroke="#712b13" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M66 86c-23 0-36 13-40 30a65 65 0 0 0 80 0c-4-17-17-30-40-30z" fill="#1f4b8e"/>
+    <path d="M59.5 86h13l-6.5 11z" fill="#e8eff8"/>
+  </g>
+</svg>

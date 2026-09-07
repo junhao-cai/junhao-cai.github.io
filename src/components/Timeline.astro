@@ -1,0 +1,45 @@
+---
+import { inlineMd } from '../lib/inline';
+
+interface Item {
+  period: string;
+  title: string;
+  subtitle?: string;
+  detail?: string;
+  links?: Array<{ label: string; href: string }>;
+}
+interface Props {
+  items: readonly Item[];
+  /** 无 period 时用它作左列，例如获奖年份 */
+  emptyHint?: string;
+}
+const { items = [], emptyHint } = Astro.props;
+---
+
+{
+  items.length === 0 ? (
+    emptyHint ? <p class="muted small">{emptyHint}</p> : null
+  ) : (
+    <ul class="timeline">
+      {items.map((it) => (
+        <li>
+          <div class="timeline__period">{it.period}</div>
+          <div>
+            <div class="timeline__title" set:html={inlineMd(it.title)} />
+            {it.subtitle && <div class="timeline__subtitle" set:html={inlineMd(it.subtitle)} />}
+            {it.detail && <div class="timeline__detail" set:html={inlineMd(it.detail)} />}
+            {it.links?.length ? (
+              <div class="timeline__links">
+                {it.links.map((l) => (
+                  <a href={l.href} target="_blank" rel="noopener noreferrer">
+                    {l.label} →
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}

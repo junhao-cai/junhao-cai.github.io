@@ -1,0 +1,33 @@
+---
+/**
+ * 语言切换按钮：在当前页面的中英版本之间跳转。
+ * 个别页面（如没有英文译文的文章）可通过 href 覆盖目标地址。
+ */
+import { switchLangPath, getLangFromUrl, useT, type Lang } from '../i18n';
+import { url as withBase } from '../lib/url';
+import Icon from './Icon.astro';
+
+interface Props {
+  /** 目标地址覆盖（例如文章无译文时指向英文列表页） */
+  href?: string;
+}
+const { href } = Astro.props;
+
+const lang: Lang = getLangFromUrl(Astro.url);
+const target: Lang = lang === 'zh' ? 'en' : 'zh';
+const t = useT(lang);
+
+const targetPath = href ?? switchLangPath(Astro.url.pathname, target);
+const finalHref = withBase(targetPath);
+---
+
+<a
+  class="lang-toggle"
+  href={finalHref}
+  aria-label={t('action.toggleLangAria')}
+  title={t('action.toggleLangAria')}
+  hreflang={target}
+>
+  <Icon name="globe" size={14} />
+  <span class="lang-toggle__label">{t('action.toggleLang')}</span>
+</a>

@@ -1,0 +1,54 @@
+# ============================================================================
+#  学术主页 —— 本地预览
+#
+#  用法（本机是 docker-compose v5.5.0 独立版，注意是带连字符的命令）：
+#    docker-compose up dev               # 热更新开发容器 → http://localhost:4321
+#    docker-compose up -d preview --build  # 生产预览（nginx 托管构建产物）→ http://localhost:8080
+#    docker-compose down                 # 停止（node_modules_dev 卷保留作依赖缓存）
+#
+#  端口可在同目录 .env 里改：DEV_PORT / PREVIEW_PORT
+#  子目录部署（GitHub Pages 项目仓库）在 .env 设 BASE_PATH=/<repo>/，或临时前缀：
+#    BASE_PATH=/repo/ docker-compose up -d preview --build   → 访问 http://localhost:8080/repo/
+# ============================================================================
+
+services:
+  # ---------------------------------------------------------- 开发热更新 --
+  dev:
+    image: node:22-alpine
+    container_name: academic-dev
+    working_dir: /app
+    volumes:
+      # 源码 bind mount：宿主机改文件，容器内即时生效
+      - ./:/app
+      # 关键：用命名卷遮蔽宿主机的 node_modules。
+      # Windows 下安装的依赖包含 win32 二进制（esbuild/sharp），Linux 容器跑不了。
+      # 依赖来源二选一：① 首次启动容器内自动 npm ci（受网络影响较慢）；
+      # ② 从 builder 镜像层缓存灌入（秒级，见 README「Docker 本地预览」）。
+      - node_modules_dev:/app/node_modules
+    ports:
+      - "${DEV_PORT:-4321}:4321"
+    environment:
+      # 本机实测：Windows 文件事件不穿透 Docker Desktop 共享，必须轮询才能热更新
+      CHOKIDAR_USEPOLLING: "1"
+      BASE_PATH: "${BASE_PATH:-/}"
+    command: >
+      sh -c "if [ -d node_modules/astro ]; then echo '>> deps found in volume, skip npm ci'; else echo '>> first run: npm ci inside container (a few minutes)...'; npm ci --no-audit --no-fund; fi &&
+             npx astro dev --host 0.0.0.0 --port 4321"
+    stdin_open: true
+    tty: true
+
+  # ---------------------------------------------------------- 生产预览 ----
+  preview:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_PATH: "${BASE_PATH:-/}"
+    image: academic-homepage-preview:latest
+    container_name: academic-preview
+    ports:
+      - "${PREVIEW_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  node_modules_dev:

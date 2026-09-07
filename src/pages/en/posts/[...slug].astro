@@ -1,0 +1,131 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Icon from '../../../components/Icon.astro';
+import PostToc from '../../../components/PostToc.astro';
+import ReadingAids from '../../../components/ReadingAids.astro';
+import { publishedPosts, tagSlug, postLang } from '../../../lib/tags';
+import { formatDate } from '../../../lib/inline';
+import { url } from '../../../lib/url';
+import { SITE } from '../../../site.config';
+import { useT } from '../../../i18n';
+
+export async function getStaticPaths() {
+  // 只出英文笔记；内容 id 为 en/<slug>，路由中去掉前缀 → /en/posts/<slug>/
+  const posts = publishedPosts(await getCollection('posts')).filter((p) => postLang(p) === 'en');
+  return posts.map((post, i) => ({
+    params: { slug: post.id.replace(/^en\//, '') },
+    props: {
+      post,
+      newer: posts[i - 1] as CollectionEntry<'posts'> | undefined,
+      older: posts[i + 1] as CollectionEntry<'posts'> | undefined,
+    },
+  }));
+}
+
+const { post, newer, older } = Astro.props;
+const { Content, headings } = await render(post);
+
+const lang = 'en';
+const t = useT(lang);
+
+const body = post.body ?? '';
+const words = body.replace(/[一-鿿]/g, ' ').split(/\s+/).filter(Boolean).length;
+const readingMinutes = Math.max(1, Math.round(words / 220));
+
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const series = post.data.series;
+const postUrl = (p: CollectionEntry<'posts'>) => url(`/en/posts/${p.id.replace(/^en\//, '')}/`);
+---
+
+<BaseLayout
+  wide
+  title={post.data.title}
+  description={post.data.description || SITE.descriptionEn}
+  ogType="article"
+  publishedTime={post.data.pubDate}
+  tags={post.data.tags}
+  image={post.data.cover}
+>
+  <div class="article-grid">
+    <div class="article-grid__main">
+      <article>
+        <header class="post-head">
+          {series && <div class="chip chip--accent" style="margin-bottom:.6rem">{series}</div>}
+          <h1>{post.data.title}</h1>
+          {post.data.description && <p class="muted" style="margin:0 0 .6rem">{post.data.description}</p>}
+          <div class="post-meta">
+            <span style="display:inline-flex;align-items:center;gap:.3rem">
+              <Icon name="calendar" size={13} />
+              <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate, 'short', lang)}</time>
+            </span>
+            <span>~{readingMinutes} min read</span>
+            {
+              post.data.updated && (
+                <span class="muted">{t('post.updated')} {formatDate(post.data.updated, 'short', lang)}</span>
+              )
+            }
+            {
+              post.data.tags.length > 0 && (
+                <span style="display:inline-flex;flex-wrap:wrap;gap:.35rem">
+                  {post.data.tags.map((tg) => (
+                    <a class="chip" href={url(`/en/tags/${tagSlug(tg)}/`)} style="font-size:.76rem;padding:.1rem .5rem">
+                      #{tg}
+                    </a>
+                  ))}
+                </span>
+              )
+            }
+          </div>
+        </header>
+
+        {
+          toc.length > 2 && (
+            <nav class="post-toc toc-inline" aria-label={t('post.toc')}>
+              <div class="post-toc__title">{t('post.toc')}</div>
+              <ol>
+                {toc.map((h) => (
+                  <li style={h.depth === 3 ? 'padding-left:1em' : undefined}>
+                    <a href={`#${h.slug}`}>{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )
+        }
+
+        <div class="prose">
+          <Content />
+        </div>
+
+        <nav class="post-nav">
+          {
+            older ? (
+              <a class="post-nav__item" href={postUrl(older)}>
+                <span class="post-nav__label">← {t('post.prevPost')}</span>
+                {older.data.title}
+              </a>
+            ) : (
+              <span />
+            )
+          }
+          {
+            newer ? (
+              <a class="post-nav__item" href={postUrl(newer)}>
+                <span class="post-nav__label">{t('post.nextPost')} →</span>
+                {newer.data.title}
+              </a>
+            ) : (
+              <span />
+            )
+          }
+        </nav>
+      </article>
+    </div>
+
+    <PostToc headings={toc} />
+  </div>
+
+  <ReadingAids />
+</BaseLayout>

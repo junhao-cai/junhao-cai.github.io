@@ -1,0 +1,133 @@
+---
+import 'katex/dist/katex.min.css';
+import '../styles/global.css';
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import SearchModal from '../components/SearchModal.astro';
+import { SITE } from '../site.config';
+import { absolute, url, stripBase } from '../lib/url';
+import { getLangFromUrl, LANG_TAG } from '../i18n';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** OG 类型：website / article / profile */
+  ogType?: 'website' | 'article' | 'profile';
+  /** 文章详情页传入，用于 OG 与结构化数据 */
+  publishedTime?: Date;
+  tags?: string[];
+  image?: string;
+  wide?: boolean;
+  noIndex?: boolean;
+}
+
+const {
+  title,
+  description = SITE.description,
+  ogType = 'website',
+  publishedTime,
+  tags = [],
+  image,
+  wide = false,
+  noIndex = false,
+} = Astro.props;
+
+const lang = getLangFromUrl(Astro.url);
+const localeDesc = lang === 'en' ? SITE.descriptionEn : SITE.description;
+const resolvedDescription = description === SITE.description && lang === 'en' ? localeDesc : description;
+const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
+const canonical = absolute(stripBase(Astro.url.pathname), SITE.url);
+const ogImage = image ? absolute(image, SITE.url) : undefined;
+const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
+---
+
+<!doctype html>
+<html lang={LANG_TAG[lang]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={resolvedDescription} />
+    <link rel="canonical" href={canonical} />
+    {noIndex && <meta name="robots" content="noindex,nofollow" />}
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title ?? SITE.title} />
+    <meta property="og:description" content={resolvedDescription} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={SITE.title} />
+    <meta property="og:locale" content={localeTag} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+    {tags.map((t) => <meta property="article:tag" content={t} />)}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title ?? SITE.title} />
+    <meta name="twitter:description" content={resolvedDescription} />
+
+    <link rel="alternate" type="application/rss+xml" title={SITE.title} href={absolute('/rss.xml', SITE.url)} />
+    <link rel="sitemap" href={absolute('/sitemap-index.xml', SITE.url)} />
+    <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
+
+    <meta name="generator" content={Astro.generator} />
+
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': ogType === 'article' ? 'BlogPosting' : 'Person',
+      name: title ?? SITE.title,
+      url: canonical,
+      description: resolvedDescription,
+      inLanguage: LANG_TAG[lang],
+    })} />
+  </head>
+
+  <body>
+    <Header />
+    <main class:list={[wide ? 'wrap' : 'wrap wrap-prose']}>
+      <slot />
+    </main>
+    <Footer />
+    <SearchModal />
+
+    <script
+      is:inline
+      define:vars={{
+        copiedText: lang === 'en' ? 'Copied' : '已复制',
+        copyText: lang === 'en' ? 'Copy citation' : '复制引用',
+      }}
+    >
+      /* 论文引用交互：APA/IEEE/MLA 切换 + 复制（事件委托，全站一份） */
+      document.addEventListener('click', (e) => {
+        const t = e.target instanceof Element ? e.target : null;
+        if (!t) return;
+        const tab = t.closest('[data-cite-tab]');
+        if (tab) {
+          const box = tab.closest('details');
+          if (!box) return;
+          box.querySelectorAll('[data-cite-tab]').forEach((b) => {
+            b.classList.toggle('is-active', b === tab);
+            b.setAttribute('aria-pressed', String(b === tab));
+          });
+          box.querySelectorAll('[data-cite-text]').forEach((d) => {
+            d.hidden = d.dataset.citeText !== tab.dataset.citeTab;
+          });
+          return;
+        }
+        const copyBtn = t.closest('[data-cite-copy]');
+        if (copyBtn && navigator.clipboard) {
+          const box = copyBtn.closest('details');
+          const cur = box && box.querySelector('[data-cite-text]:not([hidden])');
+          if (cur) {
+            navigator.clipboard.writeText(cur.textContent.trim()).then(() => {
+              copyBtn.textContent = copiedText;
+              setTimeout(() => {
+                copyBtn.textContent = copyText;
+              }, 1600);
+            });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

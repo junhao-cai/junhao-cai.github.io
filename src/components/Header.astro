@@ -1,0 +1,108 @@
+---
+import { SITE, NAV, ENABLE_SEARCH } from '../site.config';
+import { url } from '../lib/url';
+import { getLangFromUrl, useT, withLang, type Lang } from '../i18n';
+import ThemeToggle from './ThemeToggle.astro';
+import LangToggle from './LangToggle.astro';
+import Icon from './Icon.astro';
+
+const lang: Lang = getLangFromUrl(Astro.url);
+const t = useT(lang);
+
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+
+const isActive = (p: string) => {
+  const target = (base + withLang(p, lang)).replace(/\/+$/, '') || '/';
+  if (target === '/') return path === '/' || path === base;
+  return path === target || path.startsWith(target + '/');
+};
+---
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href={url(withLang('/', lang))}>{SITE.title.split('·')[0].trim()}</a>
+
+    <nav class="site-nav" id="site-nav" aria-label={lang === 'en' ? 'Main navigation' : '主导航'}>
+      {NAV.map((item) => (
+        <a href={url(withLang(item.path, lang))} aria-current={isActive(item.path) ? 'page' : undefined}>
+          {t(`nav.${item.key}` as any)}
+        </a>
+      ))}
+    </nav>
+
+    {
+      ENABLE_SEARCH && (
+        <button class="search-trigger" type="button" id="search-trigger" aria-label={t('action.searchHint')}>
+          <Icon name="search" size={14} />
+          <span class="search-trigger__label">{t('action.search')}</span>
+          <kbd class="search-trigger__kbd" id="search-kbd">Ctrl K</kbd>
+        </button>
+      )
+    }
+
+    <LangToggle />
+    <ThemeToggle />
+
+    <button
+      class="nav-toggle"
+      type="button"
+      id="nav-toggle"
+      aria-label={lang === 'en' ? 'Open menu' : '打开菜单'}
+      aria-controls="site-nav"
+      aria-expanded="false"
+    >
+      <Icon name="menu" class="icon-menu" size={18} />
+      <Icon name="x" class="icon-close" size={18} />
+    </button>
+  </div>
+</header>
+
+<script is:inline>
+  if (/Mac|iPhone|iPad/i.test(navigator.userAgent)) {
+    var __kbd = document.getElementById('search-kbd');
+    if (__kbd) __kbd.textContent = '⌘K';
+  }
+</script>
+
+<script is:inline>
+  (function () {
+    var btn = document.getElementById('nav-toggle');
+    var header = document.querySelector('.site-header');
+    if (!btn || !header) return;
+
+    function setOpen(open) {
+      header.classList.toggle('nav-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setOpen(!header.classList.contains('nav-open'));
+    });
+
+    // 点击任意导航链接后收起面板
+    header.querySelectorAll('.site-nav a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        setOpen(false);
+      });
+    });
+
+    // Esc 收起
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+
+    // 点击页面其它区域收起
+    document.addEventListener('click', function (e) {
+      if (header.classList.contains('nav-open') && !header.contains(e.target)) {
+        setOpen(false);
+      }
+    });
+
+    // 视口放大到桌面尺寸时强制收起，避免状态残留
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 768) setOpen(false);
+    });
+  })();
+</script>

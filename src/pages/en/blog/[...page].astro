@@ -1,0 +1,80 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostItem from '../../../components/PostItem.astro';
+import { publishedPosts, collectTags } from '../../../lib/tags';
+import { PAGE_SIZE } from '../../../site.config';
+import { url } from '../../../lib/url';
+import { useT } from '../../../i18n';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const posts = publishedPosts(await getCollection('posts'), 'en');
+  return paginate(posts, { pageSize: PAGE_SIZE });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+const lang = 'en';
+const t = useT(lang);
+const allPosts = publishedPosts(await getCollection('posts'), lang);
+const tags = collectTags(allPosts);
+---
+
+<BaseLayout
+  title={page.currentPage > 1 ? `${t('blog.title')} · ${t('blog.page', page.currentPage, page.lastPage)}` : t('blog.title')}
+  description={t('blog.desc')}
+  wide
+>
+  <header class="post-head">
+    <h1>{t('blog.title')}</h1>
+    <p class="muted" style="margin:.4rem 0 0">
+      {t('pub.count', allPosts.length)}
+      {page.lastPage > 1 && <> · {t('blog.page', page.currentPage, page.lastPage)}</>}
+    </p>
+  </header>
+
+  {
+    tags.length > 0 && (
+      <div style="display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.5rem">
+        {tags.map((tag) => (
+          <a class="chip" href={url(`/en/tags/${tag.slug}/`)}>
+            {tag.raw}
+            <span class="chip__count">{tag.count}</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    page.data.length === 0 ? (
+      <div class="empty-state">{t('blog.empty')}</div>
+    ) : (
+      <ul class="post-list">
+        {page.data.map((post) => (
+          <li>
+            <PostItem post={post} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {
+    page.lastPage > 1 && (
+      <nav class="pagination" aria-label="Pagination">
+        {page.url.prev ? (
+          <a href={page.url.prev} rel="prev">← {t('blog.prev')}</a>
+        ) : (
+          <span class="is-disabled">← {t('blog.prev')}</span>
+        )}
+        <span class="is-current">{page.currentPage} / {page.lastPage}</span>
+        {page.url.next ? (
+          <a href={page.url.next} rel="next">{t('blog.next')} →</a>
+        ) : (
+          <span class="is-disabled">{t('blog.next')} →</span>
+        )}
+      </nav>
+    )
+  }
+</BaseLayout>
