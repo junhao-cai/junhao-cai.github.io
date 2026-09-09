@@ -6,16 +6,18 @@ import Courses from '../components/Courses.astro';
 import PublicationItem from '../components/PublicationItem.astro';
 import Icon from '../components/Icon.astro';
 import Toc from '../components/Toc.astro';
-import { PROFILE, profile } from '../site.config';
-import { cvData, GROUP_PUBLICATIONS_BY_TYPE } from '../data/cv';
-import { PUBLICATIONS, PUBLICATIONS_YEARS, byType, TYPE_LABELS_ZH, TYPE_ORDER } from '../lib/publications';
+import { PROFILE } from '../site.config';
+import { GROUP_PUBLICATIONS_BY_TYPE } from '../data/cv';
+import { PUBLICATIONS_YEARS, byType, TYPE_LABELS_ZH, TYPE_ORDER } from '../lib/publications';
+import { loadProfile, loadCv, loadPublications } from '../lib/content';
 import { url } from '../lib/url';
 import { getLangFromUrl, useT, type UIKey } from '../i18n';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useT(lang);
-const p = profile(lang);
-const cv = cvData(lang);
+const p = loadProfile(lang);
+const cv = loadCv(lang);
+const PUBLICATIONS = loadPublications();
 
 const typeLabels = lang === 'en'
   ? { journal: 'Journal', conference: 'Conference', preprint: 'Preprint', chapter: 'Chapter', book: 'Book', thesis: 'Thesis', other: 'Other' }

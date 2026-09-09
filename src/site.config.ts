@@ -96,7 +96,10 @@ export const PROFILE_I18N: Record<Lang, ProfileI18N> = {
   },
 };
 
-/** 取当前语言的个人信息 */
+/**
+ * 取当前语言的个人信息
+ * 经 src/lib/content.ts 门面使用；直接 import 仅为门面底层实现
+ */
 export function profile(lang: Lang): ProfileI18N {
   return PROFILE_I18N[lang] ?? PROFILE_I18N.zh;
 }
@@ -112,7 +115,10 @@ export const IDENTIFIERS: Record<string, string> = {
   Twitter: '',
 };
 
-/** 侧边栏 / 首页展示的联系方式。icon 取值见 src/components/Icon.astro */
+/**
+ * 侧边栏 / 首页展示的联系方式。icon 取值见 src/components/Icon.astro
+ * 经 src/lib/content.ts 门面使用；直接 import 仅为门面底层实现
+ */
 export const CONTACT: Array<{ icon: string; label: string; value: string; href?: string }> = [
   { icon: 'mail', label: '邮箱', value: 'jh.cai@nudt.edu.cn', href: 'mailto:jh.cai@nudt.edu.cn' },
   { icon: 'map-pin', label: '位置', value: '中国 · 长沙' },
@@ -143,7 +149,10 @@ export const NEWS_I18N: Record<Lang, NewsItem[]> = {
   ],
 };
 
-/** 取当前语言的动态列表 */
+/**
+ * 取当前语言的动态列表
+ * 经 src/lib/content.ts 门面使用；直接 import 仅为门面底层实现
+ */
 export function news(lang: Lang): NewsItem[] {
   return NEWS_I18N[lang] ?? NEWS_I18N.zh;
 }

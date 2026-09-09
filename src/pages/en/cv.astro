@@ -7,14 +7,16 @@ import PublicationItem from '../../components/PublicationItem.astro';
 import Icon from '../../components/Icon.astro';
 import Toc from '../../components/Toc.astro';
 import { PROFILE } from '../../site.config';
-import { cvData, GROUP_PUBLICATIONS_BY_TYPE } from '../../data/cv';
-import { PUBLICATIONS, PUBLICATIONS_YEARS, byType } from '../../lib/publications';
+import { GROUP_PUBLICATIONS_BY_TYPE } from '../../data/cv';
+import { PUBLICATIONS_YEARS, byType } from '../../lib/publications';
+import { loadCv, loadPublications } from '../../lib/content';
 import { url } from '../../lib/url';
 import { useT, type UIKey } from '../../i18n';
 
 const lang = 'en';
 const t = useT(lang);
-const cv = cvData(lang);
+const cv = loadCv(lang);
+const PUBLICATIONS = loadPublications();
 
 const typeLabels: Record<string, string> = {
   journal: 'Journal',

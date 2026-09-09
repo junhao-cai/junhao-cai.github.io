@@ -4,9 +4,9 @@ import PublicationItem from '../../components/PublicationItem.astro';
 import Courses from '../../components/Courses.astro';
 import Icon from '../../components/Icon.astro';
 import Toc from '../../components/Toc.astro';
-import { IDENTIFIERS, CONTACT, RECENT_POSTS_COUNT, PROFILE, profile, news } from '../../site.config';
-import { PUBLICATIONS, SELECTED_PUBLICATIONS, publicationTags } from '../../lib/publications';
-import { cvData } from '../../data/cv';
+import { IDENTIFIERS, RECENT_POSTS_COUNT, PROFILE } from '../../site.config';
+import { publicationTags } from '../../lib/publications';
+import { loadProfile, loadNews, loadContact, loadCv, loadPublications, loadSelectedPublications } from '../../lib/content';
 import { inlineMd, formatDate } from '../../lib/inline';
 import { url } from '../../lib/url';
 import { useT } from '../../i18n';
@@ -15,14 +15,16 @@ import { publishedPosts } from '../../lib/tags';
 
 const lang = 'en';
 const t = useT(lang);
-const p = profile(lang);
-const newsList = news(lang);
-const cv = cvData(lang);
+const p = loadProfile(lang);
+const newsList = loadNews(lang);
+const cv = loadCv(lang);
+const PUBLICATIONS = loadPublications();
+const SELECTED_PUBLICATIONS = loadSelectedPublications();
 
 const posts = publishedPosts(await getCollection('posts'), lang);
 const recent = posts.slice(0, RECENT_POSTS_COUNT);
 const selected = (SELECTED_PUBLICATIONS.length ? SELECTED_PUBLICATIONS : PUBLICATIONS).slice(0, 4);
-const contactLinks = CONTACT.filter((c) => c.href);
+const contactLinks = loadContact().filter((c) => c.href);
 const tags = publicationTags().slice(0, 8);
 const pubCount = PUBLICATIONS.length;
 

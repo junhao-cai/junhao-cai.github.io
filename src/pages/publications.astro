@@ -1,15 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicationItem from '../components/PublicationItem.astro';
-import { PUBLICATIONS, PUBLICATIONS_YEARS, publicationTags, isSelfAuthor, selfIsCorresponding } from '../lib/publications';
+import { PUBLICATIONS_YEARS, publicationTags, isSelfAuthor, selfIsCorresponding } from '../lib/publications';
 import { formatCitation } from '../lib/bibtex';
-import { profile } from '../site.config';
+import { loadProfile, loadPublications } from '../lib/content';
 import { url } from '../lib/url';
 import { getLangFromUrl, useT, withLang } from '../i18n';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useT(lang);
-const p = profile(lang);
+const p = loadProfile(lang);
+const PUBLICATIONS = loadPublications();
 
 const years = PUBLICATIONS_YEARS;
 const tags = publicationTags();
