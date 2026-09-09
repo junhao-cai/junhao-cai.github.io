@@ -13,6 +13,8 @@
  *   absoluteUrl()   origin + withBase（语义 = url.ts absolute()，含「site 已含
  *                   base 时双拼」的现状怪癖——已由 tests/url.test.ts 锁定，
  *                   T-09 迁移时必须原样保持）
+ *   stripBaseSuffix() 站点源地址去 base 后缀（T-09 自 site.config.ts SITE.url
+ *                   原样迁入的正则手术，防 /repo/repo 双 base）
  *
  * 硬约束（决策 D9）：本模块**禁止 import src/i18n/***（含类型），语言前缀规则
  * 在 localizedPath 内联实现；i18n 层反过来依赖本模块。零第三方依赖。
@@ -75,4 +77,28 @@ export function localizedPath(path: string, lang: 'zh' | 'en'): string {
 export function absoluteUrl(path: string, site?: string): string {
   const origin = (site ?? import.meta.env.SITE ?? '').replace(/\/+$/, '');
   return `${origin}${withBase(path)}`;
+}
+
+/**
+ * 站点源地址去 base 后缀（T-09：site.config.ts SITE.url 的正则手术原样收口）。
+ * siteUrl 去全部尾斜杠后，若结尾恰为「'/' + base 核心段」（可再带一个尾斜杠）
+ * 则删除——SITE env 由 deploy.yml 按仓库推导时可能已含部署子目录
+ * （https://x.github.io/repo/），不去掉会和 absoluteUrl() 内部再拼的 base
+ * 形成 /repo/repo 双拼。正则锚定结尾（'…/repo/team' 不误删），核心段做正则
+ * 元字符转义；base 为 '/'（核心段空）时正则退化为 '//?$'，对无结尾斜杠的
+ * origin 不命中。行为由 tests/base.test.ts 的 stripBaseSuffix 场景表锁定。
+ */
+export function stripBaseSuffix(siteUrl: string): string {
+  const bp = basePath();
+  const core = bp === '/' ? '' : bp.slice(1, -1);
+  return siteUrl
+    .replace(/\/+$/, '')
+    .replace(
+      new RegExp(
+        '/' +
+          core.replace(/[.+?^${}()|[\]\\]/g, '\\$&') +
+          '/?$'
+      ),
+      ''
+    );
 }

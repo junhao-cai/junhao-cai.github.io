@@ -11,6 +11,7 @@
  */
 
 import type { Lang } from './i18n';
+import { stripBaseSuffix } from './lib/base';
 
 export const SITE = {
   /** 浏览器标签页 / OG 卡片标题（中英通用） */
@@ -23,21 +24,11 @@ export const SITE = {
     'Personal homepage of Junhao Cai — researcher in two-dimensional materials and optoelectronics at NUDT. Publications, CV and notes.',
   /**
    * 部署后的源站地址（不含 base，结尾无斜杠）。影响 RSS / sitemap / canonical / OG。
-   * 直接取 Astro 注入的 import.meta.env.SITE（由 deploy.yml 按仓库名推导），再去掉末尾 BASE_URL 子目录，
-   * 避免与 absolute() 内部再拼的 BASE_URL 重复（否则会出现 /repo/repo 双 base）。项目页 / 用户页 / 自定义域名均自适应。
+   * 直接取 Astro 注入的 import.meta.env.SITE（由 deploy.yml 按仓库名推导），经
+   * base.ts stripBaseSuffix 去掉末尾 BASE_URL 子目录，避免与 absoluteUrl() 内部
+   * 再拼的 BASE_URL 重复（否则会出现 /repo/repo 双 base）。项目页 / 用户页 / 自定义域名均自适应。
    */
-  url: (import.meta.env.SITE || 'https://example.github.io')
-    .replace(/\/+$/, '')
-    .replace(
-      new RegExp(
-        '/' +
-          (import.meta.env.BASE_URL || '/')
-            .replace(/^\/+|\/+$/g, '')
-            .replace(/[.+?^${}()|[\]\\]/g, '\\$&') +
-          '/?$'
-      ),
-      ''
-    ),
+  url: stripBaseSuffix(import.meta.env.SITE || 'https://example.github.io'),
   /** 版权起始年份 */
   sinceYear: 2020,
 } as const;

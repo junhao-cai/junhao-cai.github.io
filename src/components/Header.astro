@@ -1,6 +1,7 @@
 ---
 import { SITE, NAV, ENABLE_SEARCH } from '../site.config';
 import { url } from '../lib/url';
+import { basePath } from '../lib/base';
 import { getLangFromUrl, useT, withLang, type Lang } from '../i18n';
 import ThemeToggle from './ThemeToggle.astro';
 import LangToggle from './LangToggle.astro';
@@ -10,7 +11,9 @@ const lang: Lang = getLangFromUrl(Astro.url);
 const t = useT(lang);
 
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+// base 派生走 Base Authority（base.ts）；不用 stripBase 重写 isActive——
+// 项目站下首页项对全部 base 子路径 active 的现状行为必须原样保持
+const base = basePath().replace(/\/+$/, '');
 
 const isActive = (p: string) => {
   const target = (base + withLang(p, lang)).replace(/\/+$/, '') || '/';

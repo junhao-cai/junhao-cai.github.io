@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { absoluteUrl, basePath, localizedPath, stripBase, withBase } from '../src/lib/base';
+import { absoluteUrl, basePath, localizedPath, stripBase, stripBaseSuffix, withBase } from '../src/lib/base';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -244,6 +244,48 @@ describe('absoluteUrl() — canonical / RSS / OG（golden 对齐 url.test.ts，�
     } finally {
       if (had) env.SITE = saved;
     }
+  });
+});
+
+describe('stripBaseSuffix() — 站点源地址去 base 后缀（T-09 自 site.config.ts SITE.url 原样迁入，追加场景）', () => {
+  it("BASE_URL '/repo/' + 'https://x.github.io/repo/' → 'https://x.github.io'（带尾斜杠）", () => {
+    vi.stubEnv('BASE_URL', '/repo/');
+    expect(stripBaseSuffix('https://x.github.io/repo/')).toBe('https://x.github.io');
+  });
+
+  it("BASE_URL '/repo/' + 'https://x.github.io/repo' → 'https://x.github.io'（无尾斜杠）", () => {
+    vi.stubEnv('BASE_URL', '/repo/');
+    expect(stripBaseSuffix('https://x.github.io/repo')).toBe('https://x.github.io');
+  });
+
+  it("BASE_URL '/' + 'https://junhao-cai.github.io/' → 去尾斜杠（用户站，无可删 base 段）", () => {
+    vi.stubEnv('BASE_URL', '/');
+    expect(stripBaseSuffix('https://junhao-cai.github.io/')).toBe('https://junhao-cai.github.io');
+  });
+
+  it("BASE_URL '/' + 'https://example.github.io' → 原样（默认 env 现状锚，正则 '//?$' 不命中）", () => {
+    vi.stubEnv('BASE_URL', '/');
+    expect(stripBaseSuffix('https://example.github.io')).toBe('https://example.github.io');
+  });
+
+  it("BASE_URL '/repo/' + 'https://x.io/repo/team' → 原样（正则锚定结尾，中段不误删）", () => {
+    vi.stubEnv('BASE_URL', '/repo/');
+    expect(stripBaseSuffix('https://x.io/repo/team')).toBe('https://x.io/repo/team');
+  });
+
+  it("BASE_URL '/v1.2/' + 'https://x.io/v1.2' → 'https://x.io'（正则元字符转义，与原实现同一字符类）", () => {
+    vi.stubEnv('BASE_URL', '/v1.2/');
+    expect(stripBaseSuffix('https://x.io/v1.2')).toBe('https://x.io');
+  });
+
+  it("BASE_URL '/repo/' + 'https://x.io/repo/repo/' → 'https://x.io/repo'（结尾只删一处）", () => {
+    vi.stubEnv('BASE_URL', '/repo/');
+    expect(stripBaseSuffix('https://x.io/repo/repo/')).toBe('https://x.io/repo');
+  });
+
+  it("BASE_URL 'repo'（无前导斜杠）+ 'https://x.io/repo/' → 'https://x.io'（归一与原实现一致）", () => {
+    vi.stubEnv('BASE_URL', 'repo');
+    expect(stripBaseSuffix('https://x.io/repo/')).toBe('https://x.io');
   });
 });
 

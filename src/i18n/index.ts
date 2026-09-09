@@ -3,7 +3,11 @@
  * ---------------------------------------------------------------------------
  * 中文为默认语言且不带前缀（/ 根路径），英文走 /en/ 前缀。
  * 这样既有 URL 完全不变，SEO 与已分享链接零影响。
+ *
+ * 依赖方向（D9）：本层可依赖 src/lib/base.ts（Base Authority）；反向禁止。
  */
+
+import { stripBase } from '../lib/base';
 
 export const LANGS = ['zh', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
@@ -35,12 +39,12 @@ export function withLang(path: string, lang: Lang): string {
 
 /**
  * 把当前页面路径切到另一语言（用于语言切换按钮）。
- * 会自动去掉 BASE_URL，避免项目页部署时语言链接变成 /base/en/base/... 。
+ * 经 base.ts stripBase() 去掉 BASE_URL，避免项目页部署时语言链接变成 /base/en/base/... 。
+ * withLang 不走 base.ts localizedPath：zh 方向「剥 /en」的语义是 i18n 层自有职责
+ * （localizedPath 的 zh 是恒等），T-09 明确不迁。
  */
 export function switchLangPath(pathname: string, target: Lang): string {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  const relative = (base && pathname.startsWith(base + '/') ? pathname.slice(base.length) : pathname)
-    .replace(/\/+$/, '') || '/';
+  const relative = stripBase(pathname).replace(/\/+$/, '') || '/';
   return withLang(relative, target);
 }
 
