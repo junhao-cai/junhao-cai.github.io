@@ -33,82 +33,8 @@ const auto = Boolean(fromSelector);
   // 统一目录 scrollspy —— 修复「过短 / 末节栏目」无法正确高亮的问题。
   // 旧逻辑用 IntersectionObserver(rootMargin -70% / -70%)：短栏目永远进不了顶部 30% 带，故失效。
   // 现改为基于滚动位置的「最后一个越过阈值栏目即当前栏目」算法，并对触底强制激活末项。
-  function setupToc(root: HTMLElement) {
-    const nav = root.querySelector('nav ul');
-    if (!nav) return;
+  // 算法本体已抽至 src/lib/client/toc.ts（initToc，逐字迁移，禁止点击锁定），此处仅做初始化。
+  import { initToc } from '../lib/client/toc';
 
-    // 自动提取：从指定作用域内抓取 h2/h3 生成目录项
-    if (root.dataset.toc === 'auto' && root.dataset.scope) {
-      const scope = document.querySelector(root.dataset.scope);
-      if (scope) {
-        const heads = scope.querySelectorAll('h2, h3');
-        const frag = document.createDocumentFragment();
-        heads.forEach((h) => {
-          const id = h.id;
-          if (!id) return;
-          const li = document.createElement('li');
-          if (h.tagName === 'H3') li.className = 'is-sub';
-          const a = document.createElement('a');
-          a.href = '#' + id;
-          a.dataset.id = id;
-          // 去掉 rehype-autolink-headings 注入的锚点元素文本，仅保留标题文字
-          const clone = h.cloneNode(true) as HTMLElement;
-          clone.querySelectorAll('.heading-anchor, a').forEach((n) => n.remove());
-          a.textContent = clone.textContent!.replace(/[¶§#]/g, '').trim();
-          li.appendChild(a);
-          frag.appendChild(li);
-        });
-        nav.appendChild(frag);
-      }
-    }
-
-    const links = Array.from(root.querySelectorAll('a[href^="#"]')) as HTMLAnchorElement[];
-    const map = new Map<string, { el: HTMLElement; a: HTMLAnchorElement }>();
-    for (const a of links) {
-      const id = decodeURIComponent(a.getAttribute('href')!.slice(1));
-      const el = document.getElementById(id) as HTMLElement | null;
-      if (el) map.set(id, { el, a });
-    }
-    if (!map.size) return;
-
-    // 按文档顺序排序，保证「最后一个越过阈值的栏目」判断正确
-    const sections = [...map.values()].sort((x, y) =>
-      x.el.compareDocumentPosition(y.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
-    );
-
-    const OFFSET = 100; // 吸顶导航高度 + 余量（跳转停位 scroll-margin 84px 需落在阈值内）
-    let ticking = false;
-
-    function update() {
-      ticking = false;
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollPos = scrollY + OFFSET;
-      let currentId: string | null = null;
-      for (const s of sections) {
-        const top = s.el.getBoundingClientRect().top + scrollY;
-        if (top <= scrollPos) currentId = s.el.id;
-        else break;
-      }
-      // 顶部尚未越过任何栏目时，默认高亮第一项
-      if (!currentId && sections.length) currentId = sections[0].el.id;
-      // 触底：强制激活末项（末节往往太短，无法滚入顶部带）
-      if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 2) {
-        currentId = sections[sections.length - 1].el.id;
-      }
-      for (const s of sections) s.a.classList.toggle('is-active', s.el.id === currentId);
-    }
-
-    function onScroll() {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(update);
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    update();
-  }
-
-  document.querySelectorAll<HTMLElement>('.cv-toc').forEach(setupToc);
+  document.querySelectorAll<HTMLElement>('.cv-toc').forEach((root) => initToc(root));
 </script>

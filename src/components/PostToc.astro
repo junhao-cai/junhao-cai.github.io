@@ -34,51 +34,10 @@ const t = useT(getLangFromUrl(Astro.url));
   )
 }
 
-<script is:inline>
-  (() => {
-    const links = [...document.querySelectorAll('[data-toc-link]')];
-    if (!links.length || !('IntersectionObserver' in window)) return;
-    const byId = new Map();
-    for (const a of links) {
-      byId.set(decodeURIComponent(a.getAttribute('href').slice(1)), a);
-    }
-    const targets = [...byId.keys()]
-      .map((id) => document.getElementById(id))
-      .filter(Boolean);
-    if (!targets.length) return;
-    const setActive = (id) => {
-      for (const a of links) a.classList.remove('is-active');
-      const a = byId.get(id);
-      if (a) a.classList.add('is-active');
-    };
-    const visible = new Set();
-    let lastActive = null;
-    const docTop = (el) => el.getBoundingClientRect().top + window.scrollY;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const en of entries) {
-          if (en.isIntersecting) visible.add(en.target.id);
-          else visible.delete(en.target.id);
-        }
-        const current = targets.find((t) => visible.has(t.id));
-        if (current) {
-          lastActive = current.id;
-          setActive(current.id);
-        } else {
-          // 死角兜底：活跃带内无标题时——未到达第一个标题 → 亮第一项；
-          // 已越过最后一个标题 → 亮最后一项；其余保持上一个高亮不闪变。
-          const y = window.scrollY + 72;
-          const first = targets[0];
-          const last = targets[targets.length - 1];
-          const pick = y < docTop(first) ? first.id : y > docTop(last) ? last.id : lastActive;
-          if (pick) {
-            lastActive = pick;
-            setActive(pick);
-          }
-        }
-      },
-      { rootMargin: '-72px 0px -68% 0px', threshold: 0 }
-    );
-    targets.forEach((t) => io.observe(t));
-  })();
+<script>
+  // IO 算法本体已抽至 src/lib/client/toc.ts（initPostToc，逐字迁移，D4：与 Toc.astro 滚动位置算法不合并）。
+  // 保持原 is:inline IIFE 的初始化时机与全局查询语义：模块加载即执行、全局查 [data-toc-link]。
+  import { initPostToc } from '../lib/client/toc';
+
+  initPostToc();
 </script>
