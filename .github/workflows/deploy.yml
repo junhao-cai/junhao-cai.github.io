@@ -25,6 +25,12 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
 
+      # 构建前置门禁：类型检查与单元测试，任一失败即中止，防止坏页面发布到 Pages。
+      - name: Astro check
+        run: npm run check
+      - name: Unit tests
+        run: npm test
+
       # 根据仓库名推导 GitHub Pages 的真实地址与 base 路径：
       #   用户/主页仓库  owner.github.io  → 站点在根  /               site https://owner.github.io/
       #   项目仓库        owner/repo       → 站点在  /repo/           site https://owner.github.io/repo/
