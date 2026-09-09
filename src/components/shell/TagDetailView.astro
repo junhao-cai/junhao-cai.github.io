@@ -1,0 +1,63 @@
+---
+/**
+ * TagDetailView —— 单标签页整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/tags/[tag].astro（zh）与 src/pages/en/tags/[tag].astro（en）。
+ * 两页正文（返回链 / 标题 / 计数 / 文章列表）逐字相同，差异三处，参数化如下。
+ *
+ * lang 参数化点（传参即等价）：
+ * 1. description：zh=`标签 X 下的 N 篇文章。`；en=`N posts tagged "X".`。
+ * 2. 返回标签索引的链接：统一 url(withLang('/tags/', lang))——en 页硬编码 '/en/tags/'
+ *    与 withLang 产出相同，渲染等价。
+ * 3. 空状态：zh='该标签下暂无文章。'；en='No posts under this tag.'（真实差异，分支保留）。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - getStaticPaths 留在页面文件（zh 列中文笔记标签 / en 列英文笔记标签，ADR-004），
+ *   组件只接 props { tag, posts }（TagWithCount 形态：raw/slug/count）。
+ * - PostItem showTags={false}（列表不重复显示标签），两页一致，勿改。
+ * - 标题 ' #' 前缀拼接（`#${tag.raw}`）逐字保留，进 title 与 h1。
+ */
+import type { CollectionEntry } from 'astro:content';
+import PageShell from './PageShell.astro';
+import PostItem from '../PostItem.astro';
+import type { TagInfo } from '../../lib/tags';
+import { url } from '../../lib/url';
+import { useT, withLang, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+  tag: TagInfo;
+  posts: CollectionEntry<'posts'>[];
+}
+
+const { lang, tag, posts } = Astro.props;
+const t = useT(lang);
+---
+
+<PageShell
+  title={`#${tag.raw}`}
+  description={lang === 'en'
+    ? `${tag.count} posts tagged "${tag.raw}".`
+    : `标签 ${tag.raw} 下的 ${tag.count} 篇文章。`}
+  wide
+>
+  <header class="post-head">
+    <p class="muted small" style="margin:0"><a href={url(withLang('/tags/', lang))}>← {t('tags.title')}</a></p>
+    <h1>#{tag.raw}</h1>
+    <p class="muted" style="margin:.4rem 0 0">{t('pub.count', tag.count)}</p>
+  </header>
+
+  {
+    posts.length === 0 ? (
+      <div class="empty-state">{lang === 'en' ? 'No posts under this tag.' : '该标签下暂无文章。'}</div>
+    ) : (
+      <ul class="post-list">
+        {posts.map((p) => (
+          <li>
+            <PostItem post={p} showTags={false} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</PageShell>

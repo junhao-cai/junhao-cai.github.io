@@ -1,0 +1,110 @@
+---
+/**
+ * BlogIndexView —— 笔记列表（分页）整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/blog/[...page].astro（zh）与 src/pages/en/blog/[...page].astro（en）。
+ * 两页正文（post-head 计数 / 标签 chips / 列表 / 分页 nav）逐字相同，差异三处，参数化如下。
+ *
+ * lang 参数化点（传参即等价）：
+ * 1. 数据面：getStaticPaths 仍留在页面文件（路由与分页是页面职责，ADR-004 不动），
+ *    页面按 lang 过滤 publishedPosts 后把 Astro 分页对象 page 传入本组件；
+ *    组件内部自行取 allPosts/tags（与原页一致，两页本就按各自 lang 取）。
+ * 2. 标签 chips href：统一 url(withLang(`/tags/${tag.slug}/`, lang))——en 页硬编码
+ *    '/en/tags/...' 与 withLang 产出相同（尾斜杠恒在），渲染等价。
+ * 3. 空状态：zh 页是带 <code> 的多行中文提示（源码换行形态保留），
+ *    en 页是 t('blog.empty')——真实差异，按 lang 分支保留两形态。
+ * 4. 分页 aria-label：zh= '分页'，en= 'Pagination'。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - title 的条件拼接（currentPage > 1 时附 'blog.page'）逐字保留，页码数字进 title
+ *   与 post-head，别动 t('blog.page', a, b) 的参数顺序。
+ * - 分页 prev/next 的 <a>/<span class="is-disabled"> 分支形态与 rel 属性逐字保留。
+ * - PostItem 自带语言感知链接（组件内部处理 en/ 前缀），两页调用形态相同
+ *   （zh 页 <PostItem post={post} />，en 页同），showTags 缺省 true，不改。
+ */
+import type { Page } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import PageShell from './PageShell.astro';
+import PostItem from '../PostItem.astro';
+import { publishedPosts, collectTags } from '../../lib/tags';
+import { url } from '../../lib/url';
+import { useT, withLang, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+  /** Astro paginate 产物，由页面 getStaticPaths 传入 */
+  page: Page<CollectionEntry<'posts'>>;
+}
+
+const { lang, page } = Astro.props;
+const t = useT(lang);
+const allPosts = publishedPosts(await getCollection('posts'), lang);
+const tags = collectTags(allPosts);
+---
+
+<PageShell
+  title={page.currentPage > 1 ? `${t('blog.title')} · ${t('blog.page', page.currentPage, page.lastPage)}` : t('blog.title')}
+  description={t('blog.desc')}
+  wide
+>
+  <header class="post-head">
+    <h1>{t('blog.title')}</h1>
+    <p class="muted" style="margin:.4rem 0 0">
+      {t('pub.count', allPosts.length)}
+      {page.lastPage > 1 && <> · {t('blog.page', page.currentPage, page.lastPage)}</>}
+    </p>
+  </header>
+
+  {
+    tags.length > 0 && (
+      <div style="display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.5rem">
+        {tags.map((tag) => (
+          <a class="chip" href={url(withLang(`/tags/${tag.slug}/`, lang))}>
+            {tag.raw}
+            <span class="chip__count">{tag.count}</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    page.data.length === 0 ? (
+      lang === 'en' ? (
+        <div class="empty-state">{t('blog.empty')}</div>
+      ) : (
+        <div class="empty-state">
+          还没有文章。把 Markdown 放进 <code>src/content/posts/</code>，
+          或从 Obsidian 同步（<code>npm run sync</code>）。
+        </div>
+      )
+    ) : (
+      <ul class="post-list">
+        {page.data.map((post) => (
+          <li>
+            <PostItem post={post} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {
+    page.lastPage > 1 && (
+      <nav class="pagination" aria-label={lang === 'en' ? 'Pagination' : '分页'}>
+        {page.url.prev ? (
+          <a href={page.url.prev} rel="prev">← {t('blog.prev')}</a>
+        ) : (
+          <span class="is-disabled">← {t('blog.prev')}</span>
+        )}
+        <span class="is-current">{page.currentPage} / {page.lastPage}</span>
+        {page.url.next ? (
+          <a href={page.url.next} rel="next">{t('blog.next')} →</a>
+        ) : (
+          <span class="is-disabled">{t('blog.next')} →</span>
+        )}
+      </nav>
+    )
+  }
+</PageShell>

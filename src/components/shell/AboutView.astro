@@ -1,0 +1,62 @@
+---
+/**
+ * AboutView —— 关于页整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/about.astro（zh）与 src/pages/en/about.astro（en）。
+ * 两页正文（about-grid 双栏 + post-head + prose + Toc fromSelector）逐字相同，
+ * 差异仅内容条目的选取链。
+ *
+ * lang 参数化点（传参即等价）：
+ * - pages 集合条目选取：zh 页链 = find('about') ?? find('about') ?? entries[0]
+ *   （首参由 lang 三元得 'about'，中段与首段同一查询，等价化简为 find('about') ?? entries[0]）；
+ *   en 页链 = find('en/about') ?? entries[0]。组件按 lang 分支保留两链，
+ *   选取结果与原页在任意集合状态下逐值相同（含 about.md 缺失的退化情形）。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - description 来自 entry.data.description，必须在条目选定后组装 PageShell props
+ *   （与原页一致：先选条目，再 <BaseLayout title description wide>）。
+ * - Toc 用 fromSelector=".prose"（auto 模式，data-toc="auto"），class="about-toc"，
+ *   与首页的 items 静态模式不同——勿混用。
+ * - Astro.redirect('/404') 守卫保留原形态。注意：静态构建下该分支本就不触发
+ *   （集合恒含 about.md）；若未来集合为空，组件内 redirect 与页内 return 的
+ *   构建期表现可能不同——此为唯一退化路径差异，迁移规格表已标注。
+ * - wide 必传（AGENTS.md 约定）。
+ */
+import { getCollection, render } from 'astro:content';
+import PageShell from './PageShell.astro';
+import Toc from '../Toc.astro';
+import { useT, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useT(lang);
+
+const entries = await getCollection('pages');
+const entry = lang === 'en'
+  ? entries.find((e) => e.id === 'en/about') ?? entries[0]
+  : entries.find((e) => e.id === 'about') ?? entries[0];
+
+if (!entry) {
+  return Astro.redirect('/404');
+}
+
+const { Content } = await render(entry);
+---
+
+<PageShell title={t('nav.about')} description={entry.data.description} wide>
+  <div class="about-grid">
+    <div class="about-main">
+      <header class="post-head">
+        <h1>{entry.data.title}</h1>
+        {entry.data.description && <p class="muted" style="margin:0">{entry.data.description}</p>}
+      </header>
+      <div class="prose">
+        <Content />
+      </div>
+    </div>
+    <Toc class="about-toc" fromSelector=".prose" title={t('post.toc')} />
+  </div>
+</PageShell>

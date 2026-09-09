@@ -1,0 +1,59 @@
+---
+/**
+ * TagsIndexView —— 标签索引页整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/tags/index.astro（zh）与 src/pages/en/tags/index.astro（en）。
+ * 两页正文（post-head 计数 / chip 链接墙）逐字相同，差异三处，参数化如下。
+ *
+ * lang 参数化点（传参即等价）：
+ * 1. description：zh='按标签筛选笔记与论文。'；en='Browse notes by tag.'。
+ * 2. 计数行：zh=`N 个标签 · M 篇文章`；en=`N tags · M posts`（模板逐字保留）。
+ * 3. chips href：统一 url(withLang(`/tags/${tag.slug}/`, lang))——en 页硬编码
+ *    '/en/tags/...' 与 withLang 产出相同（尾斜杠恒在），渲染等价。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - 空状态两页同为 t('tags.empty')，无需分支。
+ * - chip 的 chip--accent / 内联 style（padding/font-size/chip__count 颜色）逐字保留。
+ * - 数据面与原页一致：publishedPosts(collection, lang) + collectTags。
+ */
+import { getCollection } from 'astro:content';
+import PageShell from './PageShell.astro';
+import { publishedPosts, collectTags } from '../../lib/tags';
+import { url } from '../../lib/url';
+import { useT, withLang, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useT(lang);
+const posts = publishedPosts(await getCollection('posts'), lang);
+const tags = collectTags(posts);
+---
+
+<PageShell title={t('tags.title')} description={lang === 'en' ? 'Browse notes by tag.' : '按标签筛选笔记与论文。'} wide>
+  <header class="post-head">
+    <h1>{t('tags.title')}</h1>
+    <p class="muted" style="margin:.4rem 0 0">
+      {lang === 'en'
+        ? `${tags.length} tags · ${posts.length} posts`
+        : `${tags.length} 个标签 · ${posts.length} 篇文章`}
+    </p>
+  </header>
+
+  {
+    tags.length === 0 ? (
+      <div class="empty-state">{t('tags.empty')}</div>
+    ) : (
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+        {tags.map((tag) => (
+          <a class="chip chip--accent" href={url(withLang(`/tags/${tag.slug}/`, lang))} style="padding:.4rem .75rem;font-size:.9rem">
+            {tag.raw}
+            <span class="chip__count" style="color:var(--c-accent)">{tag.count}</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
+</PageShell>

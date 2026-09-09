@@ -1,0 +1,230 @@
+---
+/**
+ * CvView —— 简历页整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/cv.astro（zh）与 src/pages/en/cv.astro（en）。
+ * 两页 cv-layout 各 section（education/experience/awards/grants/projects/
+ * patents/courses/teaching/service/skills/publications）与 Toc 模板逐字相同；
+ * 差异全部集中在页头 cv-head 与论文分组标签，参数化如下。
+ *
+ * lang 参数化点（传参即等价，两分支分别等于原页字面量）：
+ * 1. h1：zh=p.name（loadProfile）；en=PROFILE.nameEn。
+ * 2. 副标题：zh=`{PROFILE.nameEn} · {p.affiliation}`；
+ *    en=`{cv.experience[0]?.subtitle} · {cv.experience[0]?.title.split('·')[1]?.trim()}`
+ *    （两个表达式夹 ' · '，必须保留表达式形态，不可并成模板字符串——undefined
+ *    在 JSX 表达式里渲染为空串，进模板字符串会变成 "undefined" 字样）。
+ * 3. 地理位置：zh=p.location；en=字面量 'Changsha, China'。
+ * 4. 证件照 alt：zh=`${p.name} 证件照`；en=`${PROFILE.nameEn} photo`。
+ * 5. typeLabels：zh=TYPE_LABELS_ZH；en=英文字面量表。
+ * 6. 论文分组顺序：zh 页用 TYPE_ORDER，en 页硬编码
+ *    ['preprint','journal','conference','chapter','book','thesis','other'] ——
+ *    已验证与 lib/publications.ts 的 TYPE_ORDER 逐项相同，组件统一用 TYPE_ORDER，
+ *    渲染等价。
+ * 7. Patents lang：zh 页硬编码 "zh"、en 页 "en" —— 统一传 lang（值相同）。
+ * 8. education Timeline emptyHint：两页分别写死 CV_BY_LANG.zh / CV_BY_LANG.en，
+ *    统一为 `src/data/cv.ts → CV_BY_LANG.${lang}`（渲染结果相同）。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - SEO 参数在组件内组装：title=t('nav.cv')，description 按 lang 取对应字面量，
+ *   ogType="profile"，wide 必传（AGENTS.md 约定）。
+ * - Toc 无 class（区别于首页/关于页），items 由 toc 表 show 过滤生成，勿改。
+ * - zh 页的 <BaseLayout> 在前、属性顺序 title/description/ogType/wide，
+ *   BaseLayout 输出对 props 顺序不敏感，PageShell 透传后 head 字节不变。
+ */
+import PageShell from './PageShell.astro';
+import Timeline from '../Timeline.astro';
+import Patents from '../Patents.astro';
+import Courses from '../Courses.astro';
+import PublicationItem from '../PublicationItem.astro';
+import Icon from '../Icon.astro';
+import Toc from '../Toc.astro';
+import { PROFILE } from '../../site.config';
+import { GROUP_PUBLICATIONS_BY_TYPE } from '../../data/cv';
+import { PUBLICATIONS_YEARS, byType, TYPE_LABELS_ZH, TYPE_ORDER } from '../../lib/publications';
+import { loadProfile, loadCv, loadPublications } from '../../lib/content';
+import { url } from '../../lib/url';
+import { useT, type Lang, type UIKey } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useT(lang);
+const p = loadProfile(lang);
+const cv = loadCv(lang);
+const PUBLICATIONS = loadPublications();
+
+const typeLabels: Record<string, string> = lang === 'en'
+  ? { journal: 'Journal', conference: 'Conference', preprint: 'Preprint', chapter: 'Chapter', book: 'Book', thesis: 'Thesis', other: 'Other' }
+  : TYPE_LABELS_ZH;
+
+// 简历页侧边目录：与下方各 section 的 id / 渲染条件严格对应
+// key 标注为 UIKey，使 t(i.key) 静态可校验（纯类型注解，运行时擦除，零行为改动）
+const toc: { id: string; key: UIKey; show: boolean }[] = [
+  { id: 'education',    key: 'cv.education',    show: true },
+  { id: 'experience',   key: 'cv.experience',   show: cv.experience.length > 0 },
+  { id: 'awards',       key: 'cv.awards',       show: cv.awards.length > 0 },
+  { id: 'grants',       key: 'cv.grants',       show: cv.grants.length > 0 },
+  { id: 'projects',     key: 'cv.projects',     show: cv.projects.length > 0 },
+  { id: 'patents',      key: 'cv.patents',      show: cv.patents.length > 0 },
+  { id: 'courses',      key: 'cv.courses',      show: cv.courses.length > 0 },
+  { id: 'teaching',     key: 'cv.teaching',     show: cv.teaching.length > 0 },
+  { id: 'service',      key: 'cv.service',      show: cv.service.length > 0 },
+  { id: 'skills',       key: 'cv.skills',       show: cv.skills.length > 0 },
+  { id: 'publications', key: 'cv.publications', show: true },
+];
+const tocItems = toc.filter((i) => i.show).map((i) => ({ id: i.id, label: t(i.key) }));
+---
+
+<PageShell title={t('nav.cv')} description={lang === 'en' ? `Curriculum Vitae of ${PROFILE.nameEn}` : `${p.name} 的学术简历`} ogType="profile" wide>
+  <header class="post-head">
+    <div class="cv-head">
+      <div class="cv-head__main">
+        <h1>{lang === 'en' ? PROFILE.nameEn : p.name}</h1>
+        <p class="muted" style="margin:0">
+          {lang === 'en' ? (
+            <>{cv.experience[0]?.subtitle} · {cv.experience[0]?.title.split('·')[1]?.trim()}</>
+          ) : (
+            <>{PROFILE.nameEn} · {p.affiliation}</>
+          )}
+        </p>
+        <p class="post-meta" style="margin-top:.6rem">
+          <span style="display:inline-flex;align-items:center;gap:.3rem">
+            <Icon name="mail" size={13} /> {PROFILE.email}
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:.3rem">
+            <Icon name="map-pin" size={13} /> {lang === 'en' ? 'Changsha, China' : p.location}
+          </span>
+          <a class="chip" href={url('/cv.bib')} download style="font-size:.76rem">
+            <Icon name="pdf" size={12} /> {t('cv.downloadBib')}
+          </a>
+        </p>
+      </div>
+      {
+        PROFILE.photo && (
+          <img
+            class="cv-head__photo"
+            src={url(PROFILE.photo)}
+            alt={lang === 'en' ? `${PROFILE.nameEn} photo` : `${p.name} 证件照`}
+            width="108"
+            height="144"
+          />
+        )
+      }
+    </div>
+  </header>
+
+  <div class="cv-layout">
+    <div class="cv-layout__main">
+      <section id="education" class="section" style="margin-top:0">
+        <div class="section__head"><h2 class="section__title">{t('cv.education')}</h2></div>
+        <Timeline items={cv.education} emptyHint={`src/data/cv.ts → CV_BY_LANG.${lang}`} />
+      </section>
+
+      {cv.experience.length > 0 && (
+        <section id="experience" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.experience')}</h2></div>
+          <Timeline items={cv.experience} />
+        </section>
+      )}
+
+      {cv.awards.length > 0 && (
+        <section id="awards" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.awards')}</h2></div>
+          <Timeline items={cv.awards} />
+        </section>
+      )}
+
+      {cv.grants.length > 0 && (
+        <section id="grants" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.grants')}</h2></div>
+          <Timeline items={cv.grants} />
+        </section>
+      )}
+
+      {cv.projects.length > 0 && (
+        <section id="projects" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.projects')}</h2></div>
+          <Timeline items={cv.projects} />
+        </section>
+      )}
+
+      {cv.patents.length > 0 && (
+        <section id="patents" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.patents')}</h2></div>
+          <Patents items={cv.patents} lang={lang} />
+        </section>
+      )}
+
+      {cv.courses.length > 0 && (
+        <section id="courses" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.courses')}</h2></div>
+          <Courses items={cv.courses} lang={lang} />
+        </section>
+      )}
+
+      {cv.teaching.length > 0 && (
+        <section id="teaching" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.teaching')}</h2></div>
+          <Timeline items={cv.teaching} />
+        </section>
+      )}
+
+      {cv.service.length > 0 && (
+        <section id="service" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.service')}</h2></div>
+          <Timeline items={cv.service} />
+        </section>
+      )}
+
+      {cv.skills.length > 0 && (
+        <section id="skills" class="section">
+          <div class="section__head"><h2 class="section__title">{t('cv.skills')}</h2></div>
+          <div class="skills">
+            {cv.skills.map((g) => (
+              <div>
+                <h4>{g.group}</h4>
+                <ul>
+                  {g.items.map((i) => <li>{i}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- ------------------------------------------------------------ 论文 -->
+      <section id="publications" class="section">
+        <div class="section__head">
+          <h2 class="section__title">{t('cv.publications')}</h2>
+          <span class="section__muted muted small">
+            {t('cv.pubCount', PUBLICATIONS.length, String(PUBLICATIONS_YEARS.at(-1) ?? '—'), String(PUBLICATIONS_YEARS[0] ?? '—'))}
+          </span>
+        </div>
+
+        {
+          GROUP_PUBLICATIONS_BY_TYPE ? (
+            TYPE_ORDER.map((type) => {
+              const items = byType(type);
+              if (items.length === 0) return null;
+              return (
+                <div style="margin-bottom:1.5rem">
+                  <h3 style="font-size:1rem;margin:1.25rem 0 .25rem;color:var(--c-text-soft)">
+                    {typeLabels[type] ?? type}
+                    <span class="muted" style="font-weight:400;font-size:.85rem"> · {items.length}</span>
+                  </h3>
+                  {items.map((e) => <PublicationItem entry={e} />)}
+                </div>
+              );
+            })
+          ) : (
+            <div>{PUBLICATIONS.map((e) => <PublicationItem entry={e} />)}</div>
+          )
+        }
+      </section>
+    </div>
+
+    <Toc items={tocItems} title={t('post.toc')} />
+  </div>
+</PageShell>

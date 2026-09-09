@@ -1,0 +1,168 @@
+---
+/**
+ * PostView —— 笔记详情整页视图（T-17 新增）。
+ *
+ * 来源页面：src/pages/posts/[...slug].astro（zh）与 src/pages/en/posts/[...slug].astro（en）。
+ * 两页正文（article-grid / post-head meta / 行内 TOC / prose / post-nav / PostToc /
+ * ReadingAids）逐字相同，差异全部参数化如下。
+ *
+ * lang 参数化点（传参即等价）：
+ * 1. headings：页面（唯一保留 render(post) 的地方）把渲染所得 headings 传入，
+ *    组件内做 depth 2/3 过滤（两页过滤逻辑相同）。正文 <Content /> 经 slot 传入，
+ *    slot 内联渲染不产生额外 DOM。
+ * 2. 阅读时长：zh 按 400 字/分钟（cjk/400 + words/220），en 按 220 词/分钟
+ *    （words/220）——公式不同的真实差异，按 lang 分支保留（对各自语言的笔记
+ *    数值与原页逐值相同）。
+ * 3. 时长文案：zh=`约 N 分钟`；en=`~N min read`。
+ * 4. description 回退：统一 `post.data.description || (lang === 'en' ?
+ *    SITE.descriptionEn : SITE.description)`（en 页字面量即该分支取值）。
+ * 5. 标签 chips href：统一 url(withLang(`/tags/${tagSlug(tg)}/`, lang))——zh 页原本
+ *    不带 withLang（zh 下 withLang 是恒等加尾斜杠，'/tags/x/' 形态相同），en 页
+ *    硬编码 '/en/tags/...' 与 withLang 产出相同，渲染等价。
+ * 6. post-nav：统一带 `postLang(x) === lang` 守卫 + withLang 链接。en 页原本无守卫，
+ *    但其 getStaticPaths 只出 en 笔记，守卫恒真，渲染等价；zh 页本有守卫。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - getStaticPaths（zh 只出中文笔记 / en 只出英文笔记、slug 去 'en/' 前缀、
+ *   newer/older 按语内顺序）留在页面文件，勿搬进组件。
+ * - BaseLayout 需 ogType="article" + publishedTime + tags + image（post.data 透传），
+ *   属性缺一会影响 OG/JSON-LD 字节。
+ * - 行内 TOC（.post-toc.toc-inline）的 toc.length > 2 门槛与 h3 缩进
+ *   style="padding-left:1em" 条件形态逐字保留；桌面粘性栏仍由 <PostToc> 承担。
+ * - <ReadingAids /> 必须保留在 article-grid 之后（进度条/回顶按钮的挂载点）。
+ */
+import type { CollectionEntry } from 'astro:content';
+import PageShell from './PageShell.astro';
+import Icon from '../Icon.astro';
+import PostToc from '../PostToc.astro';
+import ReadingAids from '../ReadingAids.astro';
+import { tagSlug, postLang } from '../../lib/tags';
+import { formatDate } from '../../lib/inline';
+import { url } from '../../lib/url';
+import { SITE } from '../../site.config';
+import { useT, withLang, type Lang } from '../../i18n';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  lang: Lang;
+  post: CollectionEntry<'posts'>;
+  newer?: CollectionEntry<'posts'>;
+  older?: CollectionEntry<'posts'>;
+  /** 页面 render(post) 所得 headings（未过滤），组件内做 depth 2/3 过滤 */
+  headings: Heading[];
+}
+
+const { lang, post, newer, older, headings } = Astro.props;
+const t = useT(lang);
+
+/** 中文按 400 字/分钟、英文按 220 词/分钟估算 */
+const body = post.body ?? '';
+const cjk = (body.match(/[一-鿿]/g) ?? []).length;
+const words = body.replace(/[一-鿿]/g, ' ').split(/\s+/).filter(Boolean).length;
+const readingMinutes = lang === 'en'
+  ? Math.max(1, Math.round(words / 220))
+  : Math.max(1, Math.round(cjk / 400 + words / 220));
+
+// 语内笔记链接：英文笔记 id 带 'en/' 前缀，生成 /en/posts/<slug>/；中文恒等加尾斜杠
+const postHref = (p: CollectionEntry<'posts'>) =>
+  url(withLang(`/posts/${p.id.replace(/^en\//, '')}/`, lang));
+
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const series = post.data.series;
+---
+
+<PageShell
+  wide
+  title={post.data.title}
+  description={post.data.description || (lang === 'en' ? SITE.descriptionEn : SITE.description)}
+  ogType="article"
+  publishedTime={post.data.pubDate}
+  tags={post.data.tags}
+  image={post.data.cover}
+>
+  <div class="article-grid">
+    <div class="article-grid__main">
+      <article>
+        <header class="post-head">
+          {series && <div class="chip chip--accent" style="margin-bottom:.6rem">{series}</div>}
+          <h1>{post.data.title}</h1>
+          {post.data.description && <p class="muted" style="margin:0 0 .6rem">{post.data.description}</p>}
+          <div class="post-meta">
+            <span style="display:inline-flex;align-items:center;gap:.3rem">
+              <Icon name="calendar" size={13} />
+              <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate, 'short', lang)}</time>
+            </span>
+            <span>{lang === 'en' ? `~${readingMinutes} min read` : `约 ${readingMinutes} 分钟`}</span>
+            {
+              post.data.updated && (
+                <span class="muted">{t('post.updated')} {formatDate(post.data.updated, 'short', lang)}</span>
+              )
+            }
+            {
+              post.data.tags.length > 0 && (
+                <span style="display:inline-flex;flex-wrap:wrap;gap:.35rem">
+                  {post.data.tags.map((tg) => (
+                    <a class="chip" href={url(withLang(`/tags/${tagSlug(tg)}/`, lang))} style="font-size:.76rem;padding:.1rem .5rem">
+                      #{tg}
+                    </a>
+                  ))}
+                </span>
+              )
+            }
+          </div>
+        </header>
+
+        {
+          toc.length > 2 && (
+            <nav class="post-toc toc-inline" aria-label={t('post.toc')}>
+              <div class="post-toc__title">{t('post.toc')}</div>
+              <ol>
+                {toc.map((h) => (
+                  <li style={h.depth === 3 ? 'padding-left:1em' : undefined}>
+                    <a href={`#${h.slug}`}>{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )
+        }
+
+        <div class="prose">
+          <slot />
+        </div>
+
+        <nav class="post-nav">
+          {
+            older && postLang(older) === lang ? (
+              <a class="post-nav__item" href={postHref(older)}>
+                <span class="post-nav__label">← {t('post.prevPost')}</span>
+                {older.data.title}
+              </a>
+            ) : (
+              <span />
+            )
+          }
+          {
+            newer && postLang(newer) === lang ? (
+              <a class="post-nav__item" href={postHref(newer)}>
+                <span class="post-nav__label">{t('post.nextPost')} →</span>
+                {newer.data.title}
+              </a>
+            ) : (
+              <span />
+            )
+          }
+        </nav>
+      </article>
+    </div>
+
+    <PostToc headings={toc} />
+  </div>
+
+  <ReadingAids />
+</PageShell>

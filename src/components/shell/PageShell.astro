@@ -1,0 +1,42 @@
+---
+/**
+ * PageShell —— 统一页面外壳（T-17 新增，Phase 4a；未被任何页面引用前为零影响）。
+ *
+ * 来源页面：全部 10 组页面（根树 + en/ 镜像）当前直接调用 BaseLayout；
+ * 本组件是其 1:1 透传层，是 T-18「根树改用 + en/ 薄包装」的统一入口。
+ *
+ * lang 参数化点：BaseLayout 自行经 getLangFromUrl(Astro.url) 推导 lang
+ * （决定 <html lang> / og:locale / body data-cite-* 文案 / 默认描述回退），
+ * 因此本组件【不】接收 lang —— 页面落在哪个 URL 前缀下，BaseLayout 就得到哪个语言。
+ * 这与现页面行为逐字节一致；不得在本层自行改写 title/description。
+ *
+ * 与 HTML 等价性有关的注意点：
+ * - 本组件只做 props 透传 + slot，不引入任何元素/class/样式；Astro 不产出额外 DOM。
+ * - wide / noIndex 语义与 BaseLayout 完全相同（wide=true → <main class="wrap">，
+ *   缺省 → "wrap wrap-prose"）。既有约定：about / cv / publications / blog / posts /
+ *   tags / search 各页必须传 wide；404 不传（保持 wrap-prose）。
+ * - 右栏 TOC 约束（240px / gap 2rem）由 global.css 的 .cv-toc 与各 *-grid 模板承担，
+ *   本组件不改样式；右栏一律经 <Toc>（含 scrollspy，禁止加点击锁定）。
+ * - 404（根树双语页 + en/404）暂不经本组件迁移（两页结构本就不同，见迁移规格表）。
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** OG 类型：website / article / profile */
+  ogType?: 'website' | 'article' | 'profile';
+  /** 文章详情页传入，用于 OG 与结构化数据 */
+  publishedTime?: Date;
+  tags?: string[];
+  image?: string;
+  wide?: boolean;
+  noIndex?: boolean;
+}
+
+const props = Astro.props;
+---
+
+<BaseLayout {...props}>
+  <slot />
+</BaseLayout>
