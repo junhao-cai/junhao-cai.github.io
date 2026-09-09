@@ -82,7 +82,10 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
     })} />
   </head>
 
-  <body>
+  <body
+    data-cite-copied-text={lang === 'en' ? 'Copied' : '已复制'}
+    data-cite-copy-text={lang === 'en' ? 'Copy citation' : '复制引用'}
+  >
     <Header />
     <main class:list={[wide ? 'wrap' : 'wrap wrap-prose']}>
       <slot />
@@ -90,44 +93,9 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
     <Footer />
     <SearchModal />
 
-    <script
-      is:inline
-      define:vars={{
-        copiedText: lang === 'en' ? 'Copied' : '已复制',
-        copyText: lang === 'en' ? 'Copy citation' : '复制引用',
-      }}
-    >
-      /* 论文引用交互：APA/IEEE/MLA 切换 + 复制（事件委托，全站一份） */
-      document.addEventListener('click', (e) => {
-        const t = e.target instanceof Element ? e.target : null;
-        if (!t) return;
-        const tab = t.closest('[data-cite-tab]');
-        if (tab) {
-          const box = tab.closest('details');
-          if (!box) return;
-          box.querySelectorAll('[data-cite-tab]').forEach((b) => {
-            b.classList.toggle('is-active', b === tab);
-            b.setAttribute('aria-pressed', String(b === tab));
-          });
-          box.querySelectorAll('[data-cite-text]').forEach((d) => {
-            d.hidden = d.dataset.citeText !== tab.dataset.citeTab;
-          });
-          return;
-        }
-        const copyBtn = t.closest('[data-cite-copy]');
-        if (copyBtn && navigator.clipboard) {
-          const box = copyBtn.closest('details');
-          const cur = box && box.querySelector('[data-cite-text]:not([hidden])');
-          if (cur) {
-            navigator.clipboard.writeText(cur.textContent.trim()).then(() => {
-              copyBtn.textContent = copiedText;
-              setTimeout(() => {
-                copyBtn.textContent = copyText;
-              }, 1600);
-            });
-          }
-        }
-      });
+    <!-- 论文引用交互抽至 src/lib/client/cite.ts（Phase 2），文案经 body data 属性传入 -->
+    <script>
+      import '../lib/client/cite';
     </script>
   </body>
 </html>
