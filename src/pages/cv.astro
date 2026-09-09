@@ -10,7 +10,7 @@ import { PROFILE, profile } from '../site.config';
 import { cvData, GROUP_PUBLICATIONS_BY_TYPE } from '../data/cv';
 import { PUBLICATIONS, PUBLICATIONS_YEARS, byType, TYPE_LABELS_ZH, TYPE_ORDER } from '../lib/publications';
 import { url } from '../lib/url';
-import { getLangFromUrl, useT } from '../i18n';
+import { getLangFromUrl, useT, type UIKey } from '../i18n';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useT(lang);
@@ -22,7 +22,8 @@ const typeLabels = lang === 'en'
   : TYPE_LABELS_ZH;
 
 // 简历页侧边目录：与下方各 section 的 id / 渲染条件严格对应
-const toc = [
+// key 标注为 UIKey，使 t(i.key) 静态可校验（纯类型注解，运行时擦除，零行为改动）
+const toc: { id: string; key: UIKey; show: boolean }[] = [
   { id: 'education',    key: 'cv.education',    show: true },
   { id: 'experience',   key: 'cv.experience',   show: cv.experience.length > 0 },
   { id: 'awards',       key: 'cv.awards',       show: cv.awards.length > 0 },
