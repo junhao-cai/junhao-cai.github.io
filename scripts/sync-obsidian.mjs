@@ -36,17 +36,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
 
 const ROOT = process.cwd();
 const DRY = process.argv.includes('--dry');
 const VAULT = process.env.VAULT;
-if (!VAULT) {
-  console.error('✘ 请设置环境变量 VAULT 指向你的 Obsidian 库根目录');
-  console.error('   示例：VAULT=/d/Notes npm run sync');
-  process.exit(1);
-}
 
 /** 仓库相对路径集合：只同步这里列出的目录下的笔记 */
 const ROOT_WHITELIST = (process.env.ROOTS ?? 'Posts,Pages')
@@ -86,7 +82,7 @@ async function collectFiles() {
 
 // ---------------------------------------------------------------------------
 
-function transformWikilinks(md, knownTitles, logger) {
+export function transformWikilinks(md, knownTitles, logger) {
   return md.replace(/(^|[^!])\[\[([^\]\n]+?)\]\]/g, (_full, lead, body) => {
     const [rawTarget, label] = body.split('|');
     const [noteName, heading] = rawTarget.split('#');
@@ -211,6 +207,13 @@ async function buildIndex() {
 }
 
 async function main() {
+  // VAULT 检查原来在模块顶层：顶层 exit(1) 会连带杀死任何 import 本模块的进程
+  // （vitest 表征测试 / 复用方无法安全 import）。移入 main 后 CLI 行为不变、import 零副作用。
+  if (!VAULT) {
+    console.error('✘ 请设置环境变量 VAULT 指向你的 Obsidian 库根目录');
+    console.error('   示例：VAULT=/d/Notes npm run sync');
+    process.exit(1);
+  }
   console.log(`▸ Vault : ${VAULT}`);
   console.log(`▸ Roots : ${ROOT_WHITELIST.join(', ')}`);
   console.log(`▸ Mode  : ${DRY ? 'dry-run' : 'write'}`);
@@ -228,7 +231,11 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// CLI entry guard：仅当本文件被直接执行（node scripts/sync-obsidian.mjs）时才运行 main()；
+// 被 import（vitest 表征测试 / T-05 子进程复用）时不触发任何同步副作用。
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
