@@ -49,6 +49,14 @@ export function withBase(path: string): string {
  * 去 pathname 前端 base：与 url.ts stripBase() 语义一致——按「base + '/'」整段
  * 前缀匹配（不吃子串、不匹配恰等 base 的裸串），不匹配时原样返回；base 归一后
  * 为 '/'（即空 core）时恒等。
+ *
+ * 边界说明（T-08b 评审锁定，勿改行为）：BASE_URL='/' 时 base 归一后为空串，
+ * `base &&` 守卫使本函数对一切输入恒等返回——包括 '//cv' 这类双前导斜杠形态
+ * （该形态仅当 base 保留为 '/' 时才会被 startsWith('//') 剥成 '/cv'）。
+ * '//cv' 实践不可达：Astro 注入 BASE_URL 恒为 '/' 或 '/repo/'（deploy.yml
+ * 产出，见 astro.config.mjs fallback '/'），路由 pathname 不以 '//' 开头；
+ * 现行为属表征锁定（tests/base.test.ts golden），不为此加短路/改行为——
+ * 改行为需重新评审。
  */
 export function stripBase(pathname: string): string {
   const base = basePath().replace(/\/$/, '');

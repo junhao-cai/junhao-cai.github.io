@@ -141,6 +141,17 @@ describe("stripBase() — BASE_URL = '/'（base 归一后为空 → 恒等，gol
   });
 });
 
+describe("stripBase() — BASE_URL = 'repo'（无前导斜杠，权威归一 vs 旧 url.ts 的有意分歧，锁定现状）", () => {
+  beforeEach(() => {
+    vi.stubEnv('BASE_URL', 'repo');
+  });
+
+  it("'/repo/cv/' → '/cv/'（base.ts 先权威归一 'repo'→'/repo/' 再剥；T-08 评审记录的旧 url.ts 对无前导斜杠 BASE_URL 原样返回——T-09 后 url.ts 已退化为薄封装，分歧不复存在，本断言锁定 base.ts 权威行为）", () => {
+    expect(basePath()).toBe('/repo/');
+    expect(stripBase('/repo/cv/')).toBe('/cv/');
+  });
+});
+
 describe('localizedPath() — 语言前缀（D9：规则内联，零 i18n 依赖）', () => {
   describe('zh → 恒等（原样返回，含畸形输入）', () => {
     it("('/cv', 'zh') → '/cv'", () => {
@@ -290,8 +301,11 @@ describe('stripBaseSuffix() — 站点源地址去 base 后缀（T-09 自 site.c
 });
 
 describe('D9 架构守卫 — base.ts 零 i18n 依赖', () => {
-  it('src/lib/base.ts 源码不得 import src/i18n/*（语言前缀规则必须内联）', () => {
+  it('src/lib/base.ts 源码不得 import src/i18n/*（语言前缀规则必须内联，静态 from 与动态 import() 均覆盖）', () => {
     const source = readFileSync(fileURLToPath(new URL('../src/lib/base.ts', import.meta.url)), 'utf8');
-    expect(/from\s+['"][^'"]*i18n/.test(source), 'base.ts 不得 import src/i18n/*（D9）').toBe(false);
+    expect(
+      /from\s+['"][^'"]*i18n|import\s*\(\s*['"][^'"]*i18n/.test(source),
+      'base.ts 不得 import src/i18n/*（静态 from 与动态 import() 均不得，D9）'
+    ).toBe(false);
   });
 });
