@@ -112,53 +112,40 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
 
   <div id="multi-hint" class="floating-hint" role="status">{t('pub.multiHint')}</div>
 
-  <script is:inline>
+  <script>
+    // 论文筛选交互（Phase 2 抽取，ADR/client modules）：纯逻辑（URL 参数解析 + 匹配判定）
+    // 已抽至 src/lib/client/filter.ts（行为锁定，双页共用）；此处仅保留 DOM 接线
+    // （aria-pressed / 组显隐 / URL 回写 / Ctrl 提示），与旧内联脚本行为一致。
+    import { parsePubSelection, matchYear, matchTag, matchStat } from '../lib/client/filter';
+
     (() => {
       const filter = document.getElementById('pub-filter');
-      const statChips = [...document.querySelectorAll('button[data-stat]')];
-      const yearChips = filter ? [...filter.querySelectorAll('button[data-year]')] : [];
-      const tagChips = filter ? [...filter.querySelectorAll('button[data-tag]')] : [];
-      const groups = [...document.querySelectorAll('[data-year-group]')];
+      const statChips = [...document.querySelectorAll<HTMLButtonElement>('button[data-stat]')];
+      const yearChips = filter ? [...filter.querySelectorAll<HTMLButtonElement>('button[data-year]')] : [];
+      const tagChips = filter ? [...filter.querySelectorAll<HTMLButtonElement>('button[data-tag]')] : [];
+      const groups = [...document.querySelectorAll<HTMLElement>('[data-year-group]')];
       if (!groups.length) return;
 
       // 读取 URL：兼容首页 ?tag= 单标签，以及多选 ?tags= / ?years= / ?stat=
-      const params = new URLSearchParams(location.search);
-      const selYears = new Set();
-      const selTags = new Set();
-      let selStat = params.get('stat') || 'all';
-      const single = params.get('tag');
-      if (single) selTags.add(single);
-      else (params.get('tags') || '').split('|').filter(Boolean).forEach((t) => selTags.add(t));
-      (params.get('year') || '').split('|').filter(Boolean).forEach((y) => selYears.add(y));
-      (params.get('years') || '').split('|').filter(Boolean).forEach((y) => selYears.add(y));
-
-      const matchYear = (yr) => selYears.size === 0 || selYears.has(String(yr));
-      const matchTag = (tg) => selTags.size === 0 || String(tg).split('|').some((t) => selTags.has(t));
-      const matchStat = (a) => {
-        if (selStat === 'all') return true;
-        if (selStat === 'first') return a.dataset.firstAuthor === 'true';
-        if (selStat === 'corr') return a.dataset.corresponding === 'true';
-        return true;
-      };
+      const sel = parsePubSelection(new URLSearchParams(location.search));
 
       const apply = () => {
         for (const c of statChips) {
           const v = c.dataset.stat || 'all';
-          c.setAttribute('aria-pressed', String(v === selStat));
+          c.setAttribute('aria-pressed', String(v === sel.stat));
         }
         for (const c of yearChips) {
           const v = c.dataset.year || '';
-          c.setAttribute('aria-pressed', String(v === '' ? selYears.size === 0 : selYears.has(v)));
+          c.setAttribute('aria-pressed', String(v === '' ? sel.years.size === 0 : sel.years.has(v)));
         }
         for (const c of tagChips) {
           const v = c.dataset.tag || '';
-          c.setAttribute('aria-pressed', String(v === '' ? selTags.size === 0 : selTags.has(v)));
+          c.setAttribute('aria-pressed', String(v === '' ? sel.tags.size === 0 : sel.tags.has(v)));
         }
         for (const g of groups) {
           let shown = 0;
-          for (const a of g.querySelectorAll('[data-tags]')) {
-            const yr = a.dataset.year || '';
-            const ok = matchYear(yr) && matchTag(a.dataset.tags || '') && matchStat(a);
+          for (const a of g.querySelectorAll<HTMLElement>('[data-tags]')) {
+            const ok = matchYear(a.dataset.year || '', sel) && matchTag(a.dataset.tags || '', sel) && matchStat(a.dataset.firstAuthor, a.dataset.corresponding, sel);
             a.style.display = ok ? '' : 'none';
             if (ok) shown++;
           }
@@ -167,19 +154,19 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
         // 同步 URL（单值用易读形式，多选用管道分隔）
         const u = new URL(location.href);
         u.searchParams.delete('stat');
-        if (selStat !== 'all') u.searchParams.set('stat', selStat);
-        const sync = (multiKey, set, singleKey) => {
+        if (sel.stat !== 'all') u.searchParams.set('stat', sel.stat);
+        const sync = (multiKey: string, set: Set<string>, singleKey: string) => {
           u.searchParams.delete(multiKey);
           u.searchParams.delete(singleKey);
           if (set.size === 1) u.searchParams.set(singleKey, [...set][0]);
           else if (set.size > 1) u.searchParams.set(multiKey, [...set].join('|'));
         };
-        sync('tags', selTags, 'tag');
-        sync('years', selYears, 'year');
+        sync('tags', sel.tags, 'tag');
+        sync('years', sel.years, 'year');
         history.replaceState(null, '', u);
       };
 
-      const toggle = (set, value, multi) => {
+      const toggle = (set: Set<string>, value: string, multi: boolean) => {
         if (value === '') { set.clear(); return; }
         if (multi) {
           if (set.has(value)) set.delete(value);
@@ -192,19 +179,19 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
 
       for (const c of statChips) {
         c.addEventListener('click', () => {
-          selStat = c.dataset.stat || 'all';
+          sel.stat = c.dataset.stat || 'all';
           apply();
         });
       }
       for (const c of yearChips) {
         c.addEventListener('click', (e) => {
-          toggle(selYears, c.dataset.year || '', e.ctrlKey || e.metaKey);
+          toggle(sel.years, c.dataset.year || '', e.ctrlKey || e.metaKey);
           apply();
         });
       }
       for (const c of tagChips) {
         c.addEventListener('click', (e) => {
-          toggle(selTags, c.dataset.tag || '', e.ctrlKey || e.metaKey);
+          toggle(sel.tags, c.dataset.tag || '', e.ctrlKey || e.metaKey);
           apply();
         });
       }
@@ -213,7 +200,7 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
       const hint = document.getElementById('multi-hint');
       if (hint) {
         let active = false;
-        const move = (e) => {
+        const move = (e: MouseEvent) => {
           if (!active) return;
           hint.style.left = e.clientX + 14 + 'px';
           hint.style.top = e.clientY + 14 + 'px';
