@@ -25,3 +25,6 @@ Thumbs.db
 .obsidian/workspace*.json
 .obsidian/cache/
 .trash/
+
+# ULW 执行期运行时状态（boulder/goal/ledger/results，会话私有，不入库）
+.omz/
