@@ -15,7 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  # 质量门禁：类型检查 + 单元测试独立成 job，任一失败即阻断后续 build/deploy，
+  # 防止坏页面发布到 Pages；与构建解耦后失败定位更清晰，也避免与 build 重复跑。
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,12 +26,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-
-      # 构建前置门禁：类型检查与单元测试，任一失败即中止，防止坏页面发布到 Pages。
       - name: Astro check
         run: npm run check
       - name: Unit tests
         run: npm test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
 
       # 根据仓库名推导 GitHub Pages 的真实地址与 base 路径：
       #   用户/主页仓库  owner.github.io  → 站点在根  /               site https://owner.github.io/
@@ -58,6 +69,10 @@ jobs:
       # Pagefind 资源路径由页面里的 import.meta.env.BASE_URL 前缀处理（见
       # src/pages/search.astro 与 src/components/SearchModal.astro），这里只需
       # 普通构建索引即可。注意 pagefind 1.5+ 已不支持 --base-url CLI 参数。
+      # 缓存说明：pagefind 1.5.2 的平台二进制经 optionalDependencies
+      # （@pagefind/<platform>-<cpu>）随 npm ci 装入 node_modules，由上方
+      # setup-node 的 npm cache 覆盖下载提速；其无独立运行时缓存目录
+      # （索引产物直接写入 dist/pagefind/），故无需额外 actions/cache。
       - name: Build search index
         run: npm run postbuild:search
 
