@@ -3,9 +3,9 @@
  * CvView —— 简历页整页视图（T-17 新增）。
  *
  * 来源页面：src/pages/cv.astro（zh）与 src/pages/en/cv.astro（en）。
- * 两页 cv-layout 各 section（education/experience/awards/grants/projects/
- * patents/courses/teaching/service/skills/publications）与 Toc 模板逐字相同；
- * 差异全部集中在页头 cv-head 与论文分组标签，参数化如下。
+ * T-20 起：cv-layout 各 section 与侧边目录由 src/data/cv.ts → cvSections
+ * 描述符数组统一驱动（id/标题 key/渲染条件/渲染器同源）；差异全部集中在
+ * 页头 cv-head 与论文分组标签，参数化如下。
  *
  * lang 参数化点（传参即等价，两分支分别等于原页字面量）：
  * 1. h1：zh=p.name（loadProfile）；en=PROFILE.nameEn。
@@ -39,11 +39,11 @@ import PublicationItem from '../PublicationItem.astro';
 import Icon from '../Icon.astro';
 import Toc from '../Toc.astro';
 import { PROFILE } from '../../site.config';
-import { GROUP_PUBLICATIONS_BY_TYPE } from '../../data/cv';
+import { GROUP_PUBLICATIONS_BY_TYPE, assertKnownCvSectionRenderer, cvSections } from '../../data/cv';
 import { PUBLICATIONS_YEARS, byType, TYPE_LABELS_ZH, TYPE_ORDER } from '../../lib/publications';
 import { loadProfile, loadCv, loadPublications } from '../../lib/content';
 import { url } from '../../lib/url';
-import { useT, type Lang, type UIKey } from '../../i18n';
+import { useT, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -59,22 +59,18 @@ const typeLabels: Record<string, string> = lang === 'en'
   ? { journal: 'Journal', conference: 'Conference', preprint: 'Preprint', chapter: 'Chapter', book: 'Book', thesis: 'Thesis', other: 'Other' }
   : TYPE_LABELS_ZH;
 
-// 简历页侧边目录：与下方各 section 的 id / 渲染条件严格对应
-// key 标注为 UIKey，使 t(i.key) 静态可校验（纯类型注解，运行时擦除，零行为改动）
-const toc: { id: string; key: UIKey; show: boolean }[] = [
-  { id: 'education',    key: 'cv.education',    show: true },
-  { id: 'experience',   key: 'cv.experience',   show: cv.experience.length > 0 },
-  { id: 'awards',       key: 'cv.awards',       show: cv.awards.length > 0 },
-  { id: 'grants',       key: 'cv.grants',       show: cv.grants.length > 0 },
-  { id: 'projects',     key: 'cv.projects',     show: cv.projects.length > 0 },
-  { id: 'patents',      key: 'cv.patents',      show: cv.patents.length > 0 },
-  { id: 'courses',      key: 'cv.courses',      show: cv.courses.length > 0 },
-  { id: 'teaching',     key: 'cv.teaching',     show: cv.teaching.length > 0 },
-  { id: 'service',      key: 'cv.service',      show: cv.service.length > 0 },
-  { id: 'skills',       key: 'cv.skills',       show: cv.skills.length > 0 },
-  { id: 'publications', key: 'cv.publications', show: true },
-];
-const tocItems = toc.filter((i) => i.show).map((i) => ({ id: i.id, label: t(i.key) }));
+// 正文 section 与侧边目录统一由 src/data/cv.ts → cvSections 驱动（T-20）：
+// id / 标题 key / 渲染条件 / 渲染器全部同源——加板块 = 加一条描述符配置，
+// TOC 与 section 结构上不可失配（共用同一 renderIf 谓词）。
+// 本文件只维护 renderer key → 渲染分支（组件不能被 .ts 反向 import，映射留在渲染层）。
+// 确定性失败：渲染器 key 不在封闭集合时构建期 throw，不静默跳过
+// （T-20 显式新增行为，tests/cv-sections.test.ts 锁定）。
+cvSections.forEach(assertKnownCvSectionRenderer);
+const tocItems = cvSections.filter((s) => s.renderIf(cv)).map((s) => ({ id: s.id, label: t(s.titleKey) }));
+// 论文分区前的 HTML 注释逐字节保留（等价红线：现状注释原样保留）
+const PUBS_COMMENT = ' <!-- ------------------------------------------------------------ 论文 --> ';
+// 各 section 之间的单空格分隔（对齐原页模板换行产出的空白文本节点）
+const SECTION_GAP = ' ';
 ---
 
 <PageShell title={t('nav.cv')} description={lang === 'en' ? `Curriculum Vitae of ${PROFILE.nameEn}` : `${p.name} 的学术简历`} ogType="profile" wide>
@@ -116,113 +112,59 @@ const tocItems = toc.filter((i) => i.show).map((i) => ({ id: i.id, label: t(i.ke
   </header>
 
   <div class="cv-layout">
-    <div class="cv-layout__main">
-      <section id="education" class="section" style="margin-top:0">
-        <div class="section__head"><h2 class="section__title">{t('cv.education')}</h2></div>
-        <Timeline items={cv.education} emptyHint={`src/data/cv.ts → CV_BY_LANG.${lang}`} />
-      </section>
-
-      {cv.experience.length > 0 && (
-        <section id="experience" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.experience')}</h2></div>
-          <Timeline items={cv.experience} />
-        </section>
-      )}
-
-      {cv.awards.length > 0 && (
-        <section id="awards" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.awards')}</h2></div>
-          <Timeline items={cv.awards} />
-        </section>
-      )}
-
-      {cv.grants.length > 0 && (
-        <section id="grants" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.grants')}</h2></div>
-          <Timeline items={cv.grants} />
-        </section>
-      )}
-
-      {cv.projects.length > 0 && (
-        <section id="projects" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.projects')}</h2></div>
-          <Timeline items={cv.projects} />
-        </section>
-      )}
-
-      {cv.patents.length > 0 && (
-        <section id="patents" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.patents')}</h2></div>
-          <Patents items={cv.patents} lang={lang} />
-        </section>
-      )}
-
-      {cv.courses.length > 0 && (
-        <section id="courses" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.courses')}</h2></div>
-          <Courses items={cv.courses} lang={lang} />
-        </section>
-      )}
-
-      {cv.teaching.length > 0 && (
-        <section id="teaching" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.teaching')}</h2></div>
-          <Timeline items={cv.teaching} />
-        </section>
-      )}
-
-      {cv.service.length > 0 && (
-        <section id="service" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.service')}</h2></div>
-          <Timeline items={cv.service} />
-        </section>
-      )}
-
-      {cv.skills.length > 0 && (
-        <section id="skills" class="section">
-          <div class="section__head"><h2 class="section__title">{t('cv.skills')}</h2></div>
-          <div class="skills">
-            {cv.skills.map((g) => (
-              <div>
-                <h4>{g.group}</h4>
-                <ul>
-                  {g.items.map((i) => <li>{i}</li>)}
-                </ul>
+    <div class="cv-layout__main">{cvSections.map((s) => {
+      if (!s.renderIf(cv)) return null;
+      return (
+        <>
+          <Fragment set:html={s.id === 'publications' ? PUBS_COMMENT : SECTION_GAP} /><section id={s.id} class="section" style={s.style}>
+            {s.renderer === 'publications' ? (
+              <div class="section__head">
+                <h2 class="section__title">{t(s.titleKey)}</h2>
+                <span class="section__muted muted small">
+                  {t('cv.pubCount', PUBLICATIONS.length, String(PUBLICATIONS_YEARS.at(-1) ?? '—'), String(PUBLICATIONS_YEARS[0] ?? '—'))}
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <!-- ------------------------------------------------------------ 论文 -->
-      <section id="publications" class="section">
-        <div class="section__head">
-          <h2 class="section__title">{t('cv.publications')}</h2>
-          <span class="section__muted muted small">
-            {t('cv.pubCount', PUBLICATIONS.length, String(PUBLICATIONS_YEARS.at(-1) ?? '—'), String(PUBLICATIONS_YEARS[0] ?? '—'))}
-          </span>
-        </div>
-
-        {
-          GROUP_PUBLICATIONS_BY_TYPE ? (
-            TYPE_ORDER.map((type) => {
-              const items = byType(type);
-              if (items.length === 0) return null;
-              return (
-                <div style="margin-bottom:1.5rem">
-                  <h3 style="font-size:1rem;margin:1.25rem 0 .25rem;color:var(--c-text-soft)">
-                    {typeLabels[type] ?? type}
-                    <span class="muted" style="font-weight:400;font-size:.85rem"> · {items.length}</span>
-                  </h3>
-                  {items.map((e) => <PublicationItem entry={e} />)}
-                </div>
-              );
-            })
-          ) : (
-            <div>{PUBLICATIONS.map((e) => <PublicationItem entry={e} />)}</div>
-          )
-        }
-      </section>
+            ) : (
+              <div class="section__head"><h2 class="section__title">{t(s.titleKey)}</h2></div>
+            )}
+            {s.renderer === 'timeline' && (s.emptyHint
+              ? <Timeline items={cv[s.source]} emptyHint={`src/data/cv.ts → CV_BY_LANG.${lang}`} />
+              : <Timeline items={cv[s.source]} />)}{s.renderer === 'patents' && <Patents items={cv.patents} lang={lang} />}{s.renderer === 'courses' && <Courses items={cv.courses} lang={lang} />}
+            {s.renderer === 'skills' && (
+              <div class="skills">
+                {cv.skills.map((g) => (
+                  <div>
+                    <h4>{g.group}</h4>
+                    <ul>
+                      {g.items.map((i) => <li>{i}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+            {s.renderer === 'publications' && (
+              GROUP_PUBLICATIONS_BY_TYPE ? (
+                TYPE_ORDER.map((type) => {
+                  const items = byType(type);
+                  if (items.length === 0) return null;
+                  return (
+                    <div style="margin-bottom:1.5rem">
+                      <h3 style="font-size:1rem;margin:1.25rem 0 .25rem;color:var(--c-text-soft)">
+                        {typeLabels[type] ?? type}
+                        <span class="muted" style="font-weight:400;font-size:.85rem"> · {items.length}</span>
+                      </h3>
+                      {items.map((e) => <PublicationItem entry={e} />)}
+                    </div>
+                  );
+                })
+              ) : (
+                <div>{PUBLICATIONS.map((e) => <PublicationItem entry={e} />)}</div>
+              )
+            )}
+          </section>
+        </>
+      );
+    })}
     </div>
 
     <Toc items={tocItems} title={t('post.toc')} />

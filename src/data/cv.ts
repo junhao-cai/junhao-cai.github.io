@@ -7,6 +7,7 @@
  */
 
 import type { Lang } from '../i18n';
+import type { UIKey } from '../i18n';
 
 export interface TimelineItem {
   /** 起止，例如 "2022.09 — 至今" */
@@ -339,3 +340,90 @@ export const SELF_NAME_VARIANTS: string[] = [
 
 /** CV 页是否按类型分组展示论文；false 则按年份一条龙 */
 export const GROUP_PUBLICATIONS_BY_TYPE = true;
+
+// ---------------------------------------------------------------------------
+// CV 分区描述符（T-20，Wave 6）：简历页正文 <section> 与侧边目录的唯一事实源。
+// 加板块 = 加一条描述符；仅当引入全新渲染形态时才需要在 CvView 增加渲染分支。
+//
+// 设计约束：本文件是数据层，描述符只存「渲染器 key 字符串」（渲染组件不能被
+// .ts 反向 import），key → 组件/分支的映射表由 src/components/shell/CvView.astro
+// 维护，并以 assertKnownCvSectionRenderer 在构建期做确定性失败（不静默跳过）。
+//
+// 等价性基线 = T-17 迁移后的硬编码 CvView（2026-09-10 黄金对照）：以下 11 条的
+// 顺序 / id / 标题 key / 渲染条件逐项对应原硬编码，勿改顺序；Patents 的
+// lang={lang} 传参等既有怪癖在 CvView 渲染分支内原样保留。
+// ---------------------------------------------------------------------------
+
+/** CvData 中值为 TimelineItem[] 的字段名（类型级派生，新增同型字段自动纳入） */
+export type CvTimelineSource = {
+  [K in keyof CvData]: CvData[K] extends TimelineItem[] ? K : never;
+}[keyof CvData];
+
+/** 渲染器 key 封闭集合：CvView 按此实现渲染分支 */
+export const CV_SECTION_RENDERERS = [
+  'timeline',
+  'patents',
+  'courses',
+  'skills',
+  'publications',
+] as const;
+
+export type CvSectionRenderer = (typeof CV_SECTION_RENDERERS)[number];
+
+/** 运行时收窄：字符串是否为合法渲染器 key */
+export function isCvSectionRenderer(v: string): v is CvSectionRenderer {
+  return (CV_SECTION_RENDERERS as readonly string[]).includes(v);
+}
+
+interface CvSectionBase {
+  /** section 锚点 id；正文 <section id> 与目录锚点同源 */
+  id: string;
+  /** 标题 i18n key（喂 t()，UIKey 静态可校验） */
+  titleKey: UIKey;
+  /** 渲染条件（数据存在性谓词）；目录可见性与正文渲染共用同一谓词 */
+  renderIf: (cv: CvData) => boolean;
+  /** 透传到 <section> 的 style（现状仅 education 有 margin-top:0） */
+  style?: string;
+}
+
+export type CvSection = CvSectionBase &
+  (
+    | { renderer: 'timeline'; source: CvTimelineSource; /** 传 Timeline emptyHint（现状仅 education） */ emptyHint?: boolean }
+    | { renderer: 'patents'; source: 'patents' }
+    | { renderer: 'courses'; source: 'courses' }
+    | { renderer: 'skills'; source: 'skills' }
+    | { renderer: 'publications'; source: 'publications' }
+  );
+
+/**
+ * 简历分区（顺序即渲染顺序，勿动）：
+ * education/publications 无条件渲染（renderIf 恒真），其余数据为空自动隐藏
+ * （renderIf 谓词 = 原 CvView 中 toc.show 与正文条件渲染的同一表达式）。
+ */
+export const cvSections: readonly CvSection[] = [
+  { id: 'education',    titleKey: 'cv.education',    source: 'education',  renderIf: () => true,                          renderer: 'timeline', emptyHint: true, style: 'margin-top:0' },
+  { id: 'experience',   titleKey: 'cv.experience',   source: 'experience', renderIf: (cv) => cv.experience.length > 0,    renderer: 'timeline' },
+  { id: 'awards',       titleKey: 'cv.awards',       source: 'awards',     renderIf: (cv) => cv.awards.length > 0,        renderer: 'timeline' },
+  { id: 'grants',       titleKey: 'cv.grants',       source: 'grants',     renderIf: (cv) => cv.grants.length > 0,        renderer: 'timeline' },
+  { id: 'projects',     titleKey: 'cv.projects',     source: 'projects',   renderIf: (cv) => cv.projects.length > 0,      renderer: 'timeline' },
+  { id: 'patents',      titleKey: 'cv.patents',      source: 'patents',    renderIf: (cv) => cv.patents.length > 0,       renderer: 'patents' },
+  { id: 'courses',      titleKey: 'cv.courses',      source: 'courses',    renderIf: (cv) => cv.courses.length > 0,       renderer: 'courses' },
+  { id: 'teaching',     titleKey: 'cv.teaching',     source: 'teaching',   renderIf: (cv) => cv.teaching.length > 0,      renderer: 'timeline' },
+  { id: 'service',      titleKey: 'cv.service',      source: 'service',    renderIf: (cv) => cv.service.length > 0,       renderer: 'timeline' },
+  { id: 'skills',       titleKey: 'cv.skills',       source: 'skills',     renderIf: (cv) => cv.skills.length > 0,        renderer: 'skills' },
+  { id: 'publications', titleKey: 'cv.publications', source: 'publications', renderIf: () => true,                        renderer: 'publications' },
+];
+
+/**
+ * 渲染器 key 的确定性失败：未知 key 在构建期 throw，拒绝静默跳过。
+ * 现状（T-17 硬编码版）没有这层抽象；这是 T-20 显式新增的行为，
+ * 由 tests/cv-sections.test.ts 锁定。CvView 渲染前对全部描述符调用。
+ */
+export function assertKnownCvSectionRenderer(section: { id: string; renderer: string }): void {
+  if (!isCvSectionRenderer(section.renderer)) {
+    throw new Error(
+      `[cvSections] 分区 "${section.id}" 的 renderer "${section.renderer}" 不在 CV_SECTION_RENDERERS ` +
+        `${JSON.stringify(CV_SECTION_RENDERERS)} 中：请在 CvView 增加对应渲染分支或修正 key（拒绝静默跳过）。`,
+    );
+  }
+}
