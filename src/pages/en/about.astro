@@ -1,32 +1,5 @@
 ---
-import { getCollection, render } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Toc from '../../components/Toc.astro';
-import { useT } from '../../i18n';
-
-const t = useT('en');
-
-const entries = await getCollection('pages');
-const entry = entries.find((e) => e.id === 'en/about') ?? entries[0];
-
-if (!entry) {
-  return Astro.redirect('/404');
-}
-
-const { Content } = await render(entry);
+import AboutView from '../../components/shell/AboutView.astro';
 ---
 
-<BaseLayout title={t('nav.about')} description={entry.data.description} wide>
-  <div class="about-grid">
-    <div class="about-main">
-      <header class="post-head">
-        <h1>{entry.data.title}</h1>
-        {entry.data.description && <p class="muted" style="margin:0">{entry.data.description}</p>}
-      </header>
-      <div class="prose">
-        <Content />
-      </div>
-    </div>
-    <Toc class="about-toc" fromSelector=".prose" title={t('post.toc')} />
-  </div>
-</BaseLayout>
+<AboutView lang="en" />

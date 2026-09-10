@@ -1,11 +1,8 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
-import BaseLayout from '../../../layouts/BaseLayout.astro';
-import PostItem from '../../../components/PostItem.astro';
+import TagDetailView from '../../../components/shell/TagDetailView.astro';
 import { publishedPosts, collectTags, postsOfTag } from '../../../lib/tags';
-import { url } from '../../../lib/url';
-import { useT } from '../../../i18n';
 
 export const getStaticPaths = (async () => {
   const posts = publishedPosts(await getCollection('posts'), 'en');
@@ -16,31 +13,6 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { tag, posts } = Astro.props;
-const t = useT('en');
 ---
 
-<BaseLayout
-  title={`#${tag.raw}`}
-  description={`${tag.count} posts tagged "${tag.raw}".`}
-  wide
->
-  <header class="post-head">
-    <p class="muted small" style="margin:0"><a href={url('/en/tags/')}>← {t('tags.title')}</a></p>
-    <h1>#{tag.raw}</h1>
-    <p class="muted" style="margin:.4rem 0 0">{t('pub.count', tag.count)}</p>
-  </header>
-
-  {
-    posts.length === 0 ? (
-      <div class="empty-state">No posts under this tag.</div>
-    ) : (
-      <ul class="post-list">
-        {posts.map((p) => (
-          <li>
-            <PostItem post={p} showTags={false} />
-          </li>
-        ))}
-      </ul>
-    )
-  }
-</BaseLayout>
+<TagDetailView lang="en" tag={tag} posts={posts} />

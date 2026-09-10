@@ -1,37 +1,8 @@
 ---
-import { getCollection, render } from 'astro:content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Toc from '../components/Toc.astro';
-import { getLangFromUrl, useT } from '../i18n';
+import AboutView from '../components/shell/AboutView.astro';
+import { getLangFromUrl } from '../i18n';
 
 const lang = getLangFromUrl(Astro.url);
-const t = useT(lang);
-
-// 中文取 about.md，英文取 en/about.md；无英文译文时回退中文
-const entries = await getCollection('pages');
-const entry =
-  entries.find((e) => e.id === (lang === 'en' ? 'en/about' : 'about')) ??
-  entries.find((e) => e.id === 'about') ??
-  entries[0];
-
-if (!entry) {
-  return Astro.redirect('/404');
-}
-
-const { Content } = await render(entry);
 ---
 
-<BaseLayout title={t('nav.about')} description={entry.data.description} wide>
-  <div class="about-grid">
-    <div class="about-main">
-      <header class="post-head">
-        <h1>{entry.data.title}</h1>
-        {entry.data.description && <p class="muted" style="margin:0">{entry.data.description}</p>}
-      </header>
-      <div class="prose">
-        <Content />
-      </div>
-    </div>
-    <Toc class="about-toc" fromSelector=".prose" title={t('post.toc')} />
-  </div>
-</BaseLayout>
+<AboutView lang={lang} />
