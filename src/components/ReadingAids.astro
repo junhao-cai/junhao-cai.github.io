@@ -26,8 +26,9 @@ const t = useT(getLangFromUrl(Astro.url));
   </svg>
 </button>
 
-<script is:inline>
-  (() => {
+<script>
+  // ViewTransitions：导航后进度条/回到顶部被重建，经 astro:page-load 重接。
+  document.addEventListener('astro:page-load', () => {
     const bar = document.getElementById('read-progress-bar');
     const btn = document.getElementById('back-top');
     if (!bar || !btn) return;
@@ -51,5 +52,5 @@ const t = useT(getLangFromUrl(Astro.url));
     );
     update();
     btn.addEventListener('click', () => window.scrollTo(0, 0));
-  })();
+  });
 </script>

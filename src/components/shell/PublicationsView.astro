@@ -150,7 +150,29 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
     // （aria-pressed / 组显隐 / URL 回写 / Ctrl 提示），与旧内联脚本行为一致。
     import { parsePubSelection, matchYear, matchTag, matchStat } from '../../lib/client/filter';
 
-    (() => {
+    // 浮动提示（全局，仅注册一次）：按住 Ctrl/⌘ 时跟随鼠标显示。
+    // 置于 module 顶层（非 page-load），随 SPA 导航保持单一监听；事件内惰性重查 #multi-hint，避免失效引用 / 监听累积。
+    {
+      let active = false;
+      const move = (e: MouseEvent) => {
+        if (!active) return;
+        const h = document.getElementById('multi-hint');
+        if (!h) return;
+        h.style.left = e.clientX + 14 + 'px';
+        h.style.top = e.clientY + 14 + 'px';
+      };
+      window.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.ctrlKey || e.metaKey) { active = true; const h = document.getElementById('multi-hint'); if (h) h.style.display = 'block'; }
+      });
+      window.addEventListener('keyup', (e: KeyboardEvent) => {
+        if (!e.ctrlKey && !e.metaKey) { active = false; const h = document.getElementById('multi-hint'); if (h) h.style.display = 'none'; }
+      });
+      window.addEventListener('mousemove', move);
+    }
+
+    // ViewTransitions：导航到论文页后需重初始化筛选。module 仅执行一次，借 astro:page-load 每次触发。
+    document.addEventListener('astro:page-load', () => {
+      (() => {
       const filter = document.getElementById('pub-filter');
       const statChips = [...document.querySelectorAll<HTMLButtonElement>('button[data-stat]')];
       const yearChips = filter ? [...filter.querySelectorAll<HTMLButtonElement>('button[data-year]')] : [];
@@ -228,26 +250,9 @@ const selfCorrCount = PUBLICATIONS.filter((e) => selfIsCorresponding(e)).length;
         });
       }
 
-      // 浮动提示：按住 Ctrl / ⌘ 时跟随鼠标显示
-      const hint = document.getElementById('multi-hint');
-      if (hint) {
-        let active = false;
-        const move = (e: MouseEvent) => {
-          if (!active) return;
-          hint.style.left = e.clientX + 14 + 'px';
-          hint.style.top = e.clientY + 14 + 'px';
-        };
-        window.addEventListener('keydown', (e) => {
-          if (e.ctrlKey || e.metaKey) { active = true; hint.style.display = 'block'; }
-        });
-        window.addEventListener('keyup', (e) => {
-          if (!e.ctrlKey && !e.metaKey) { active = false; hint.style.display = 'none'; }
-        });
-        window.addEventListener('mousemove', move);
-      }
-
       apply();
     })();
+    });
   </script>
 
   <p class="muted small" style="margin-top:2.5rem">

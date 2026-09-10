@@ -35,9 +35,11 @@ const t = useT(getLangFromUrl(Astro.url));
 }
 
 <script>
-  // IO 算法本体已抽至 src/lib/client/toc.ts（initPostToc，逐字迁移，D4：与 Toc.astro 滚动位置算法不合并）。
-  // 保持原 is:inline IIFE 的初始化时机与全局查询语义：模块加载即执行、全局查 [data-toc-link]。
   import { initPostToc } from '../lib/client/toc';
 
-  initPostToc();
+  // ViewTransitions：导航后 body 被替换，需经 astro:page-load 重初始化文章目录。
+  // 本脚本为 module（仅执行一次），监听器注册一次、每次导航触发，无重复注册。
+  document.addEventListener('astro:page-load', () => {
+    initPostToc();
+  });
 </script>

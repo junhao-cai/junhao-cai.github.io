@@ -8,6 +8,7 @@ import SearchModal from '../components/SearchModal.astro';
 import { SITE } from '../site.config';
 import { absolute, url, stripBase } from '../lib/url';
 import { getLangFromUrl, LANG_TAG } from '../i18n';
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
   title?: string;
@@ -45,6 +46,7 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
 <!doctype html>
 <html lang={LANG_TAG[lang]}>
   <head>
+    <ClientRouter />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>

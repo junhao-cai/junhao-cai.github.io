@@ -61,31 +61,37 @@ const isActive = (p: string) => {
   </div>
 </header>
 
-<script is:inline>
-  if (/Mac|iPhone|iPad/i.test(navigator.userAgent)) {
-    var __kbd = document.getElementById('search-kbd');
-    if (__kbd) __kbd.textContent = '⌘K';
-  }
+<script>
+  // ViewTransitions：导航后 #search-kbd 可能被重建，经 astro:page-load 重接。
+  document.addEventListener('astro:page-load', () => {
+    if (/Mac|iPhone|iPad/i.test(navigator.userAgent)) {
+      const __kbd = document.getElementById('search-kbd');
+      if (__kbd) __kbd.textContent = '⌘K';
+    }
+  });
 </script>
 
-<script is:inline>
-  (function () {
-    var btn = document.getElementById('nav-toggle');
-    var header = document.querySelector('.site-header');
+<script>
+  // ViewTransitions：导航后 header 与 #nav-toggle 被重建，经 astro:page-load 重接交互。
+  document.addEventListener('astro:page-load', function () {
+    const btn = document.getElementById('nav-toggle');
+    const header = document.querySelector('.site-header');
     if (!btn || !header) return;
+    const btnEl = btn as HTMLButtonElement;
+    const headerEl = header as HTMLElement;
 
-    function setOpen(open) {
-      header.classList.toggle('nav-open', open);
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    function setOpen(open: boolean) {
+      headerEl.classList.toggle('nav-open', open);
+      btnEl.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
-    btn.addEventListener('click', function (e) {
+    btnEl.addEventListener('click', function (e) {
       e.stopPropagation();
-      setOpen(!header.classList.contains('nav-open'));
+      setOpen(!headerEl.classList.contains('nav-open'));
     });
 
     // 点击任意导航链接后收起面板
-    header.querySelectorAll('.site-nav a').forEach(function (a) {
+    headerEl.querySelectorAll('.site-nav a').forEach(function (a) {
       a.addEventListener('click', function () {
         setOpen(false);
       });
@@ -98,7 +104,8 @@ const isActive = (p: string) => {
 
     // 点击页面其它区域收起
     document.addEventListener('click', function (e) {
-      if (header.classList.contains('nav-open') && !header.contains(e.target)) {
+      const target = e.target as EventTarget | null;
+      if (headerEl.classList.contains('nav-open') && !headerEl.contains(target as Node | null)) {
         setOpen(false);
       }
     });
@@ -107,5 +114,5 @@ const isActive = (p: string) => {
     window.addEventListener('resize', function () {
       if (window.innerWidth > 768) setOpen(false);
     });
-  })();
+  });
 </script>

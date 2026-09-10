@@ -30,11 +30,12 @@ const auto = Boolean(fromSelector);
 </aside>
 
 <script>
-  // 统一目录 scrollspy —— 修复「过短 / 末节栏目」无法正确高亮的问题。
-  // 旧逻辑用 IntersectionObserver(rootMargin -70% / -70%)：短栏目永远进不了顶部 30% 带，故失效。
-  // 现改为基于滚动位置的「最后一个越过阈值栏目即当前栏目」算法，并对触底强制激活末项。
-  // 算法本体已抽至 src/lib/client/toc.ts（initToc，逐字迁移，禁止点击锁定），此处仅做初始化。
   import { initToc } from '../lib/client/toc';
 
-  document.querySelectorAll<HTMLElement>('.cv-toc').forEach((root) => initToc(root));
+  // ViewTransitions：导航后 body 被替换，需经 astro:page-load 重初始化 scrollspy。
+  // 本脚本为 module（仅执行一次），监听器注册一次、每次导航触发，无重复注册。
+  // 算法本体在 src/lib/client/toc.ts（initToc，基于滚动位置，禁止点击锁定），此处仅做初始化。
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('.cv-toc').forEach((root) => initToc(root));
+  });
 </script>

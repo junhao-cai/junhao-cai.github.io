@@ -14,7 +14,7 @@ import Icon from './Icon.astro';
 </button>
 
 <script is:inline>
-  // 首屏前应用主题，避免闪白
+  // 首屏前应用主题，避免闪白（parse 期同步执行，不依赖 astro:page-load）
   (() => {
     try {
       const saved = localStorage.getItem('theme');
@@ -26,14 +26,20 @@ import Icon from './Icon.astro';
       }
     } catch {}
   })();
+</script>
 
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const root = document.documentElement;
-    const isDark = root.classList.toggle('dark');
-    const theme = isDark ? 'dark' : 'light';
-    root.dataset.theme = theme;
-    try {
-      localStorage.setItem('theme', theme);
-    } catch {}
+<script>
+  // ViewTransitions：导航后 #theme-toggle 被重建，需经 astro:page-load 重接点击监听。
+  // 主题已作用于 <html>（跨导航保持），无需重复应用，故此处只接点击。
+  document.addEventListener('astro:page-load', () => {
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      const root = document.documentElement;
+      const isDark = root.classList.toggle('dark');
+      const theme = isDark ? 'dark' : 'light';
+      root.dataset.theme = theme;
+      try {
+        localStorage.setItem('theme', theme);
+      } catch {}
+    });
   });
 </script>

@@ -2,15 +2,24 @@
 import { ENABLE_SEARCH } from '../site.config';
 import { getLangFromUrl, useT } from '../i18n';
 import Icon from './Icon.astro';
+import { withBase } from '../lib/base';
 
 const t = useT(getLangFromUrl(Astro.url));
-// is:inline 脚本不经过 Vite 处理，import.meta 不可用——在 frontmatter 先算好 pagefind 地址
-const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
+// is:inline 脚本不经过 Vite 处理，import.meta 不可用——在 frontmatter 先经 base.ts 算好 pagefind 地址（ADR-003 收口）
+const pfUrl = withBase('pagefind/pagefind.js');
 ---
 
 {
   ENABLE_SEARCH && (
-    <dialog id="search-modal" class="search-modal" aria-label={t('search.title')}>
+    <dialog
+      id="search-modal"
+      class="search-modal"
+      aria-label={t('search.title')}
+      data-empty={t('search.empty')}
+      data-no-result={t('search.noResult')}
+      data-index-missing={t('search.indexMissing') + ': npm run build && npm run postbuild:search'}
+      data-pf-url={pfUrl}
+    >
       <div class="search-modal__bar">
         <Icon name="search" size={16} />
         <input
@@ -30,31 +39,29 @@ const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
   )
 }
 
-<script
-  is:inline
-  define:vars={{
-    empty: t('search.empty'),
-    noResult: t('search.noResult'),
-    indexMissing:
-      t('search.indexMissing') +
-      ': npm run build && npm run postbuild:search',
-    pfUrl,
-  }}
->
-  window.__SEARCH_I18N__ = { empty, noResult, indexMissing, pfUrl };
-</script>
-
-<script is:inline>
-  (() => {
+<script>
+  // ViewTransitions：module 脚本仅执行一次，经 astro:page-load 在每次导航后重接搜索弹窗交互。
+  // 服务端文案经 #search-modal 的 data-* 传入（define:vars 会强制 is:inline，导致 SPA 反复访问时
+  // astro:page-load 监听累积，故改用 module 脚本 + data 属性）。
+  document.addEventListener('astro:page-load', () => {
     const modal = document.getElementById('search-modal');
     const trigger = document.getElementById('search-trigger');
     const input = document.getElementById('search-input');
     const box = document.getElementById('search-results');
     if (!modal || !trigger || !input || !box) return;
+    const dialog = modal as HTMLDialogElement;
+    const triggerEl = trigger as HTMLElement;
+    const inputEl = input as HTMLInputElement;
+    const boxEl = box as HTMLElement;
 
-    const MSG = window.__SEARCH_I18N__ || {};
-    let pagefind; // undefined = 未加载, null = 加载失败
-    async function pf() {
+    const MSG = {
+      empty: dialog.dataset.empty ?? '',
+      noResult: dialog.dataset.noResult ?? '',
+      indexMissing: dialog.dataset.indexMissing ?? '',
+      pfUrl: dialog.dataset.pfUrl ?? '',
+    };
+    let pagefind: any; // undefined = 未加载, null = 加载失败
+    async function pf(): Promise<any> {
       if (pagefind !== undefined) return pagefind;
       try {
         pagefind = await import(MSG.pfUrl);
@@ -64,12 +71,13 @@ const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
       return pagefind;
     }
 
-    function hint(msg) {
-      box.innerHTML = '<div class="search-modal__hint"></div>';
-      box.firstElementChild.textContent = msg;
+    function hint(msg: string): void {
+      boxEl.innerHTML = '<div class="search-modal__hint"></div>';
+      const child = boxEl.firstElementChild;
+      if (child) child.textContent = msg;
     }
 
-    async function run(q) {
+    async function run(q: string): Promise<void> {
       const lib = await pf();
       if (!lib) {
         hint(MSG.indexMissing);
@@ -84,9 +92,9 @@ const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
         hint(MSG.noResult);
         return;
       }
-      const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()));
-      box.innerHTML = items
-        .map((d) => {
+      const items = await Promise.all(res.results.slice(0, 8).map((r: any) => r.data()));
+      boxEl.innerHTML = items
+        .map((d: any) => {
           const title = (d.meta && d.meta.title) || d.url;
           return (
             '<a class="search-hit" href="' + d.url + '">' +
@@ -98,35 +106,35 @@ const pfUrl = (import.meta.env.BASE_URL || '/') + 'pagefind/pagefind.js';
         .join('');
     }
 
-    function open() {
-      modal.showModal();
-      input.focus();
-      input.select();
+    function open(): void {
+      dialog.showModal();
+      inputEl.focus();
+      inputEl.select();
     }
 
-    trigger.addEventListener('click', open);
-    document.addEventListener('keydown', (e) => {
+    triggerEl.addEventListener('click', open);
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
-        modal.open ? modal.close() : open();
+        dialog.open ? dialog.close() : open();
       }
     });
 
-    let timer;
-    input.addEventListener('input', () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    inputEl.addEventListener('input', () => {
       clearTimeout(timer);
-      timer = setTimeout(() => run(input.value.trim()), 120);
+      timer = setTimeout(() => run(inputEl.value.trim()), 120);
     });
-    input.addEventListener('keydown', (e) => {
+    inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key !== 'Enter') return;
-      const first = box.querySelector('a.search-hit');
+      const first = boxEl.querySelector<HTMLElement>('a.search-hit');
       if (first) {
-        modal.close();
+        dialog.close();
         first.click();
       }
     });
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.close();
+    dialog.addEventListener('click', (e: MouseEvent) => {
+      if (e.target === dialog) dialog.close();
     });
-  })();
+  });
 </script>
