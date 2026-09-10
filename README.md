@@ -53,6 +53,8 @@ export VAULT=/d/Notes           # 你的 vault 根目录
 export ROOTS=Posts,Pages       # 只同步这几个一级目录下的笔记
 npm run sync                    # 实际写入
 npm run sync:dry                # 只看会被写入哪些文件
+npm run sync -- --prune         # 报告 public/attachments/ 中 vault 已不引用的残留附件（dry-run，不删）
+npm run sync -- --prune --delete  # 同上，并真正删除这些残留
 ```
 
 vault 里的笔记 frontmatter 需要 `publish: true` 才会被同步，否则留在 vault。
