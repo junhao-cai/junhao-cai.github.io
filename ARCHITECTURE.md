@@ -55,7 +55,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 
 ### 2.5 测试护栏
 
-`vitest`（`vitest.config.ts`，`npm test`）：`tests/` 下 9 文件 188 用例，覆盖 `base` / `url` / `bibtex` / `content` / `publications` / `client-filter` / `cv-sections` / `sync-wikilinks` / `sync-e2e`。解析器与同步脚本已先锁行为再改（Phase 0 护栏）。
+`vitest`（`vitest.config.ts`，`npm test`）：`tests/` 下 10 文件 195 用例，覆盖 `base` / `url` / `bibtex` / `content` / `publications` / `client-filter` / `cv-sections` / `sync-wikilinks` / `sync-e2e` / `sync-prune`。解析器与同步脚本已先锁行为再改（Phase 0 护栏）。
 
 ## 3. 关键设计决策（ADR 摘要）
 
@@ -71,7 +71,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 
 - **渲染等价验收口径**：重构各步以「产物渲染等价」为验收（DOM / 输出不变，仅实现迁移；见 review §8「Phase 1/2 不改变产物 DOM 结构」）。
 - **PostToc / Toc 双算法不合并**：文章页与栏目页的目录场景不同（滚动位置 vs IntersectionObserver、移动端兜底各异），保持两组件分工，不强行统一。
-- **附件清理 `--prune` 默认 dry-run**：**规划中**（`scripts/sync-obsidian.mjs` 尚无 prune 实现；落地时须默认 dry-run、显式才真删）。
+- **附件清理 `--prune` 默认 dry-run**：**已落地**（`npm run sync --prune`；默认 dry-run 只报告，`--prune --delete` 才真删，见 `scripts/sync-obsidian.mjs`）。
 
 ### 2.6 风险收口对照（review §4 风险 A-H → 现状）
 
@@ -83,7 +83,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 | E BASE_PATH 散落 5 处 | 已收口：`src/lib/base.ts` 唯一权威 |
 | F 简历页硬编码 | 已收口：`cvSections` 数据驱动 |
 | G 解析器零测试 | 已收口：vitest 表征测试（bibtex / sync / filter 等） |
-| H 附件不同步清理 | 未处理：`--prune` 规划中（见 §3 补充决策） |
+| H 附件不同步清理 | 已收口：`--prune` 已落地（默认 dry-run 只报告，`--prune --delete` 真删，见 §3 补充决策） |
 
 ## 4. 目录导览
 
@@ -99,7 +99,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 | `src/layouts/BaseLayout.astro` | HTML 外壳、SEO/OG/JSON-LD、引用切换事件委托 |
 | `src/data/` | `pubs.bib`、`cv.ts`（含 `cvSections` 配置数组） |
 | `src/i18n/index.ts` | 语言工具 + UI 字典 `DICT` |
-| `tests/` | vitest 表征 / 单元 / e2e 测试（9 文件 188 用例） |
+| `tests/` | vitest 表征 / 单元 / e2e 测试（10 文件 195 用例） |
 | `scripts/sync-obsidian.mjs` | Obsidian vault → 内容集合 + 附件的构建前同步 |
 | `.github/workflows/deploy.yml` | CI：check + test + build + Pages 部署 |
 
@@ -121,7 +121,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 npm run dev        # 本地开发（astro dev）
 npm run build      # 静态构建 → dist/
 npm run check      # astro check（CI 与改动后自检）
-npm test           # vitest run（188 用例）
+npm test           # vitest run（195 用例）
 npm run sync       # Obsidian vault → 内容集合（VAULT=/path/to/vault 前置）
 npm run sync:dry   # 同步 dry-run，零写入
 npm run preview    # astro preview；Docker 预览见 docker-compose（PREVIEW_PORT=8080）
