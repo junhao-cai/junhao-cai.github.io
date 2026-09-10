@@ -18,7 +18,6 @@ import {
   groupByYear,
   TYPE_LABELS,
   TYPE_ORDER,
-  type Author,
   type Entry,
 } from '../src/lib/bibtex';
 

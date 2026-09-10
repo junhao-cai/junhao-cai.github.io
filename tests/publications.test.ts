@@ -168,6 +168,3 @@ describe('publicationTags / linkFor / 类型标签冒烟', () => {
     expect(TYPE_ORDER.length).toBe(7);
   });
 });
-
-
-type EntryShape = import('../src/lib/bibtex').Entry;
