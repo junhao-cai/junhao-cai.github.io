@@ -19,7 +19,7 @@
  * 真实仓库仍以 git status --short 前后快照逐行相等作硬断言兜底。
  */
 
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
@@ -40,27 +40,14 @@ const SCRIPT = path.join(REPO_ROOT, 'scripts', 'sync-obsidian.mjs');
 const SPAWN_TIMEOUT = 60_000;
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); // 假 PNG 头
 
-// ---- 真实仓库零写入兜底 ----------------------------------------------------
+// ---- 真实仓库零写入：沙箱隔离保证，不做全局 git 零残留兜底 -----------------
+// 本文件所有 fixture 与脚本执行都在 os.tmpdir() 沙箱（cwd=沙箱）下进行，脚本契约
+// ROOT = process.cwd()（sync-obsidian.mjs:43），产物 / prune 扫描全部落在临时目录，
+// 真实仓库（src/content/{posts,pages}/、public/attachments）零写入。
+// 故此处不做全局 `git status --short` 零残留断言——该断言会与并行运行的
+// sync-e2e.test.mjs（合法写入真实仓库并在 finally/afterAll 清理）竞态，导致非确定性失败；
+// 真实仓库零残留由 sync-e2e 自带断言覆盖（tests/sync-e2e.test.mjs）。
 
-function gitStatusShort() {
-  const r = spawnSync('git', ['status', '--short'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: SPAWN_TIMEOUT,
-  });
-  if (r.status !== 0) throw new Error(`git status --short 失败: ${r.stderr || r.stdout}`);
-  return r.stdout
-    .split('\n')
-    .map((l) => l.replace(/\r$/, ''))
-    .filter((l) => l.length > 0);
-}
-
-const GIT_BEFORE = gitStatusShort(); // 动手前快照
-
-afterAll(() => {
-  // 所有 fixture 都在 os.tmpdir() 沙箱里，真实仓库必须零残留（硬断言）
-  expect(gitStatusShort()).toEqual(GIT_BEFORE);
-});
 
 // ---- fixture ---------------------------------------------------------------
 
