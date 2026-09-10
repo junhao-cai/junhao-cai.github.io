@@ -71,7 +71,7 @@ posts.bib/TS 数据  astro.config 插件链        components/shell/*          d
 
 - **渲染等价验收口径**：重构各步以「产物渲染等价」为验收（DOM / 输出不变，仅实现迁移；见 review §8「Phase 1/2 不改变产物 DOM 结构」）。
 - **PostToc / Toc 双算法不合并**：文章页与栏目页的目录场景不同（滚动位置 vs IntersectionObserver、移动端兜底各异），保持两组件分工，不强行统一。
-- **附件清理 `--prune` 默认 dry-run**：**已落地**（`npm run sync --prune`；默认 dry-run 只报告，`--prune --delete` 才真删，见 `scripts/sync-obsidian.mjs`）。
+- **附件清理 `--prune` 默认 dry-run**：**已落地**（`npm run sync -- --prune`，注意 npm 透传需 `--` 分隔符；默认 dry-run 只报告，`npm run sync -- --prune --delete` 才真删，见 `scripts/sync-obsidian.mjs`）。
 
 ### 2.6 风险收口对照（review §4 风险 A-H → 现状）
 
