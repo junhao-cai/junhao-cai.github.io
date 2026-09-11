@@ -118,17 +118,32 @@ const isActive = (p: string) => {
     // 而非写死视口断点，后期新增导航标签会自动提前折叠。
     function navOverflows(): boolean {
       if (!navEl) return false;
-      const prev = navEl.style.cssText;
-      // 临时解除收缩/滚动约束，测出导航自然内容宽度
-      navEl.style.position = 'static';
-      navEl.style.display = 'flex';
-      navEl.style.flex = '0 0 auto';
-      navEl.style.minWidth = '0';
-      navEl.style.width = 'max-content';
-      navEl.style.overflow = 'visible';
+      const navPrev = navEl.style.cssText;
+      // 测量期间临时隐藏汉堡，使判定始终基于「展开态」这一种布局，
+      // 避免汉堡显隐随状态变化导致阈值漂移、拖拽时反复横跳。
+      const toggle = headerEl.querySelector('.nav-toggle') as HTMLElement | null;
+      const togglePrev = toggle ? toggle.style.cssText : '';
+      if (toggle) toggle.style.display = 'none';
+      // 导航脱离文档流测自然宽：position:absolute + visibility:hidden。
+      // 既不扰动右侧控件布局（无可见位移闪烁），又能拿到真实内容宽度。
+      navEl.style.position = 'absolute';
       navEl.style.visibility = 'hidden';
-      const overflow = innerEl.scrollWidth > innerEl.clientWidth + 1;
-      navEl.style.cssText = prev;
+      navEl.style.display = 'flex';
+      navEl.style.flexDirection = 'row';
+      navEl.style.flex = '0 0 auto';
+      navEl.style.width = 'max-content';
+      navEl.style.whiteSpace = 'nowrap';
+      navEl.style.left = '0';
+      navEl.style.top = '0';
+      const navW = navEl.scrollWidth;
+      const gap = parseFloat(getComputedStyle(innerEl).gap || getComputedStyle(innerEl).columnGap || '0') || 0;
+      // 其余控件（汉堡已隐藏、导航已离流）的自然总宽
+      const othersW = innerEl.scrollWidth;
+      // 导航可用宽度 = 头部内容宽 − 其余控件占用 − 一个相邻间隙
+      const available = innerEl.clientWidth - othersW - gap;
+      const overflow = navW > available + 1;
+      navEl.style.cssText = navPrev;
+      if (toggle) toggle.style.cssText = togglePrev;
       return overflow;
     }
 
