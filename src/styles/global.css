@@ -295,54 +295,36 @@ main {
   display: block;
 }
 
-/* 窄屏（≤768px）：横排标签栏收起，切换为右下角浮动按钮（FAB），点击展开导航菜单 */
-@media (max-width: 768px) {
-  .nav-toggle {
-    position: fixed;
-    right: 1.25rem;
-    bottom: 1.25rem;
-    z-index: 60;
-    display: flex;
-    width: 3.25rem;
-    height: 3.25rem;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: var(--c-accent);
-    color: #fff;
-    box-shadow: var(--shadow-2);
-  }
-  .nav-toggle:hover {
-    color: #fff;
-    filter: brightness(1.08);
-  }
-  /* 标签栏收起后，brand 靠左、其余控件靠右，维持头部平衡 */
-  .brand {
-    margin-right: auto;
-  }
-  .site-nav {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 5;
-    flex-direction: column;
-    gap: 0.15rem;
-    background: var(--c-surface);
-    border-bottom: 1px solid var(--c-border);
-    box-shadow: var(--shadow-2);
-    padding: 0.5rem clamp(1rem, 4vw, 2.5rem) 0.75rem;
-    overflow: visible; /* 覆盖基础 overflow-x:auto */
-    display: none;
-  }
-  .site-header.nav-open .site-nav {
-    display: flex;
-  }
-  .site-nav a {
-    width: 100%;
-    padding: 0.7rem 0.6rem;
-    font-size: 0.95rem;
-  }
+/* 自适应折叠：当导航项实际放不下时（由 Header.astro 的 JS 给 .site-header 加
+   .nav-collapsed），横排标签栏收起为内联汉堡按钮（沿用 .nav-toggle 基础样式），
+   点击展开下拉面板。阈值由内容宽度决定，而非写死视口断点——后期新增导航标签
+   会自动提前折叠，无需改 CSS。 */
+.site-header.nav-collapsed .nav-toggle {
+  display: flex;
+}
+.site-header.nav-collapsed .site-nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  flex: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  box-shadow: var(--shadow-2);
+  padding: 0.5rem clamp(1rem, 4vw, 2.5rem) 0.75rem;
+  overflow: visible; /* 覆盖基础 overflow-x:auto */
+  display: none;
+}
+.site-header.nav-collapsed.nav-open .site-nav {
+  display: flex;
+}
+.site-header.nav-collapsed .site-nav a {
+  width: 100%;
+  padding: 0.7rem 0.6rem;
+  font-size: 0.95rem;
 }
 
 /* 窄屏：收紧头部间距，给导航更多横向空间，避免遮挡 */

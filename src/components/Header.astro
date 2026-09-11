@@ -76,9 +76,12 @@ const isActive = (p: string) => {
   document.addEventListener('astro:page-load', function () {
     const btn = document.getElementById('nav-toggle');
     const header = document.querySelector('.site-header');
-    if (!btn || !header) return;
+    const inner = document.querySelector('.site-header__inner');
+    if (!btn || !header || !inner) return;
     const btnEl = btn as HTMLButtonElement;
     const headerEl = header as HTMLElement;
+    const innerEl = inner as HTMLElement;
+    const navEl = headerEl.querySelector('.site-nav') as HTMLElement | null;
 
     function setOpen(open: boolean) {
       headerEl.classList.toggle('nav-open', open);
@@ -110,9 +113,47 @@ const isActive = (p: string) => {
       }
     });
 
-    // 视口放大到桌面尺寸时强制收起，避免状态残留
+    // 自适应折叠：当导航项实际放不下（内容宽度超出头部可用宽度）时，给 .site-header
+    // 加 .nav-collapsed——横排标签栏收起为内联汉堡、点击展开下拉面板。阈值由内容决定，
+    // 而非写死视口断点，后期新增导航标签会自动提前折叠。
+    function navOverflows(): boolean {
+      if (!navEl) return false;
+      const prev = navEl.style.cssText;
+      // 临时解除收缩/滚动约束，测出导航自然内容宽度
+      navEl.style.position = 'static';
+      navEl.style.display = 'flex';
+      navEl.style.flex = '0 0 auto';
+      navEl.style.minWidth = '0';
+      navEl.style.width = 'max-content';
+      navEl.style.overflow = 'visible';
+      navEl.style.visibility = 'hidden';
+      const overflow = innerEl.scrollWidth > innerEl.clientWidth + 1;
+      navEl.style.cssText = prev;
+      return overflow;
+    }
+
+    function updateNav() {
+      if (!navEl || !headerEl.isConnected) return;
+      const collapsed = navOverflows();
+      headerEl.classList.toggle('nav-collapsed', collapsed);
+      // 展开态下不允许残留展开面板
+      if (!collapsed) setOpen(false);
+    }
+
+    // 视口变化（或字体加载改变宽度）时重算；rAF 节流避免抖动
+    let raf = 0;
     window.addEventListener('resize', function () {
-      if (window.innerWidth > 768) setOpen(false);
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = 0;
+        updateNav();
+      });
     });
+
+    updateNav();
+    // 字体异步加载可能改变导航项宽度，加载完成后复核一次
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(updateNav);
+    }
   });
 </script>
