@@ -295,10 +295,30 @@ main {
   display: block;
 }
 
-/* 窄屏（≤768px）：内联导航收起为下拉面板，彻底避免横向滚动 */
+/* 窄屏（≤768px）：横排标签栏收起，切换为右下角浮动按钮（FAB），点击展开导航菜单 */
 @media (max-width: 768px) {
   .nav-toggle {
-    display: inline-flex;
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    display: flex;
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--c-accent);
+    color: #fff;
+    box-shadow: var(--shadow-2);
+  }
+  .nav-toggle:hover {
+    color: #fff;
+    filter: brightness(1.08);
+  }
+  /* 标签栏收起后，brand 靠左、其余控件靠右，维持头部平衡 */
+  .brand {
+    margin-right: auto;
   }
   .site-nav {
     position: absolute;
