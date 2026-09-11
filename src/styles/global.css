@@ -473,6 +473,10 @@ main {
 }
 .hero__bio p {
   margin: 0 0 0.6rem;
+  /* 与 .prose p 同口径（两端对齐，行宽相等）。hero 简介不在 .prose 容器内，
+     需在此显式补齐，否则中英文首页简介右边缘参差。 */
+  text-align: justify;
+  text-justify: inter-ideograph;
 }
 .hero__bio strong {
   color: var(--c-text);

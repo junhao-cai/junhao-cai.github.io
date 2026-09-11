@@ -76,7 +76,6 @@ export const PROFILE_I18N: Record<Lang, ProfileI18N> = {
     tagline: '石墨烯离子输运 / 二维材料异质结 / 光电子学',
     location: '中国 · 长沙',
     bio: [
-      '国防科技大学前沿交叉学科学院讲师。',
       '先后获**清华大学**精密仪器学士学位（2015）、**国防科技大学**光学工程硕士学位（2017）与**英国曼彻斯特大学**纳米科学专业博士学位（2022）。博士期间师从 Marcelo Lozada-Hidalgo 教授与 Irina Grigorieva 教授，从事二维材料离子输运研究，以第一作者在 *Nature Communications*、*Nano Letters* 报道了石墨烯电极上界面水解离的 Wien 效应与光加速现象。',
       '研究兴趣集中在**石墨烯等二维材料中的质子 / 离子输运**、范德华异质结中的质子-电子协同调控、低维光电子器件等。',
     ],
@@ -89,8 +88,7 @@ export const PROFILE_I18N: Record<Lang, ProfileI18N> = {
       'Proton/ion transport in 2D materials / proton–electron regulation in vdW heterostructures / optoelectronics',
     location: 'Changsha, China',
     bio: [
-      'I am a Lecturer in the College of Advanced Interdisciplinary Studies at the National University of Defense Technology (NUDT), Changsha, China.',
-      'I received my B.Eng. in Measurement and Control Technology and Instruments from **Tsinghua University** (2015), M.Eng. in Optical Engineering from **NUDT** (2017), and Ph.D. in Nanoscience from **The University of Manchester** (2022). During my doctoral studies under Professors Marcelo Lozada-Hidalgo and Irina Grigorieva, I worked on ion transport through two-dimensional materials; as first author I reported the Wien effect in interfacial water dissociation and its photo-acceleration across graphene electrodes in *Nature Communications* and *Nano Letters*.',
+      'I received my B.Eng. in Measurement and Control Technology and Instruments from **Tsinghua University** (2015), M.Eng. in Optical Engineering from **National University of Defense Technology (NUDT)** (2017), and Ph.D. in Nanoscience from **The University of Manchester** (2022). During my doctoral studies under Professors Marcelo Lozada-Hidalgo and Irina Grigorieva, I worked on ion transport through two-dimensional materials; as first author I reported the Wien effect in interfacial water dissociation and its photo-acceleration across graphene electrodes in *Nature Communications* and *Nano Letters*.',
       'My research focuses on **proton and ion transport through graphene and related 2D materials**, proton–electron coordinated regulation in van der Waals heterostructures, and low-dimensional optoelectronic devices.',
     ],
   },
