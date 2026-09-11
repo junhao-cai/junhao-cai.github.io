@@ -684,7 +684,7 @@ a.chip:hover {
     width: auto;
     max-height: 76vh;
     overflow-y: auto;
-    padding: 0.55rem 0.3rem;
+    padding: 0.5rem 0.2rem;
     background: color-mix(in srgb, var(--c-surface) 92%, transparent);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
@@ -708,7 +708,7 @@ a.chip:hover {
   .cv-toc a {
     margin-left: 0;
     border-left: none;
-    padding: 0.3rem 0.35rem;
+    padding: 0.28rem 0.22rem;
     writing-mode: vertical-rl;
     text-orientation: mixed;
     font-size: 0.7rem;
