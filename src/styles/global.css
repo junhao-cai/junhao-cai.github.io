@@ -1728,7 +1728,9 @@ a.side-item:hover .side-item__title {
   height: 40px;
   border-radius: 50%;
   border: 1px solid var(--c-border-strong);
-  background: var(--c-surface);
+  background: color-mix(in srgb, var(--c-surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   color: var(--c-text);
   display: grid;
   place-items: center;
@@ -1736,16 +1738,27 @@ a.side-item:hover .side-item__title {
   opacity: 0;
   visibility: hidden;
   transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s,
+    border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 .back-top.is-show {
-  opacity: 1;
+  opacity: 0.55;
   visibility: visible;
   transform: none;
 }
-.back-top:hover {
+.back-top:hover,
+.back-top:focus-visible {
+  opacity: 1;
   border-color: var(--c-accent);
   color: var(--c-accent);
+  outline: none;
+}
+/* 窄屏：右缘被竖向 TOC 占用，按钮移到底部左侧避免遮挡与冲突 */
+@media (max-width: 900px) {
+  .back-top {
+    right: auto;
+    left: 1.4rem;
+  }
 }
 
 /* --------------------------------------------------------- 搜索 -- */

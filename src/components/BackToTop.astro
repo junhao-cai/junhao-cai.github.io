@@ -1,0 +1,51 @@
+---
+/**
+ * 回到顶部浮动按钮 —— 全局挂载（BaseLayout）。
+ * - 滚动超过阈值自动淡入（.is-show）；默认半透明（毛玻璃），悬停/聚焦变实。
+ * - 点击平滑回顶。
+ * - ViewTransitions：经 astro:page-load 在每次导航后重接监听（与 Toc/ReadingAids 同模式）。
+ */
+import { getLangFromUrl, useT } from '../i18n';
+const t = useT(getLangFromUrl(Astro.url));
+---
+
+<button class="back-top" id="back-top" type="button" aria-label={t('footer.backTop')} title={t('footer.backTop')}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 19V5M5 12l7-7 7 7"></path>
+  </svg>
+</button>
+
+<script>
+  // ViewTransitions：导航后按钮被重建，经 astro:page-load 重接滚动显示与点击回顶。
+  document.addEventListener('astro:page-load', () => {
+    const btn = document.getElementById('back-top');
+    if (!btn) return;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      btn.classList.toggle('is-show', window.scrollY > 600);
+    };
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true }
+    );
+    update();
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  });
+</script>
