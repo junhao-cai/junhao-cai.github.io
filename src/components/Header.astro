@@ -135,10 +135,19 @@ const isActive = (p: string) => {
       navEl.style.whiteSpace = 'nowrap';
       navEl.style.left = '0';
       navEl.style.top = '0';
-      const navW = navEl.scrollWidth;
+      const navW = navEl.getBoundingClientRect().width;
       const gap = parseFloat(getComputedStyle(innerEl).gap || getComputedStyle(innerEl).columnGap || '0') || 0;
-      // 其余控件（汉堡已隐藏、导航已离流）的自然总宽
-      const othersW = innerEl.scrollWidth;
+      // 其余控件（汉堡已隐藏、导航已离流）的实际占用宽度之和 + 它们之间的 flex 间隙。
+      // 注意：不能用 innerEl.scrollWidth 当 othersW——导航离流后右侧控件不溢出容器，
+      // scrollWidth 会被钳制成容器宽度（=clientWidth），导致 available 恒为负、永远折叠。
+      let othersW = 0;
+      let inFlow = 0;
+      for (const child of Array.from(innerEl.children)) {
+        if (child === navEl) continue;
+        const w = (child as HTMLElement).getBoundingClientRect().width;
+        if (w > 0) { othersW += w; inFlow++; }
+      }
+      othersW += gap * Math.max(0, inFlow - 1);
       // 导航可用宽度 = 头部内容宽 − 其余控件占用 − 一个相邻间隙
       const available = innerEl.clientWidth - othersW - gap;
       const overflow = navW > available + 1;
