@@ -16,10 +16,10 @@
  *    对 en 产出 '/en/cv/' 与 en 页硬编码一致），无需参数化。
  *
  * 与 HTML 等价性有关的注意点：
- * - 【已知不可字节级等价点】页内 <script>（筛选交互 DOM 接线）：现状 zh/en 两页各自
+ * - 【已知不可字节级等价点】页内筛选脚本（筛选交互 DOM 接线）：现状 zh/en 两页各自
  *   编译出内容相同但文件名不同的两个 chunk（dist 实测
  *   publications.astro_..._lang.CqOZfhIC.js 与 .BkMB6_9s.js）。T-18 两页共用本组件后
- *   合并为单一 chunk，页面 HTML 中 <script src> 文件名必变（DOM 与行为不变）。
+ *   合并为单一 chunk，页面 HTML 中筛选脚本的 src 文件名必变（DOM 与行为不变）。
  *   T-19 的 dist diff 断言须对这两页的 script src 行做规范化豁免。
  * - 脚本 import 路径已按 shell/ 目录深度调整为 '../../lib/client/filter'；
  *   导入的是同一模块，bundle 行为等价。
