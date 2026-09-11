@@ -1753,13 +1753,6 @@ a.side-item:hover .side-item__title {
   color: var(--c-accent);
   outline: none;
 }
-/* 窄屏：右缘被竖向 TOC 占用，按钮移到底部左侧避免遮挡与冲突 */
-@media (max-width: 900px) {
-  .back-top {
-    right: auto;
-    left: 1.4rem;
-  }
-}
 
 /* --------------------------------------------------------- 搜索 -- */
 
