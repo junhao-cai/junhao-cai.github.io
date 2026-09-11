@@ -2,6 +2,7 @@
 import { SITE, NAV, ENABLE_SEARCH } from '../site.config';
 import { url } from '../lib/url';
 import { basePath } from '../lib/base';
+import { isNavActive } from '../lib/nav';
 import { getLangFromUrl, useT, withLang, type Lang } from '../i18n';
 import ThemeToggle from './ThemeToggle.astro';
 import LangToggle from './LangToggle.astro';
@@ -10,16 +11,14 @@ import Icon from './Icon.astro';
 const lang: Lang = getLangFromUrl(Astro.url);
 const t = useT(lang);
 
-const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
-// base 派生走 Base Authority（base.ts）；不用 stripBase 重写 isActive——
-// 项目站下首页项对全部 base 子路径 active 的现状行为必须原样保持
+// base 派生走 Base Authority（base.ts）；不用 stripBase 重写高亮判定。
+// 判定收口到 src/lib/nav.ts 的 isNavActive()（纯函数，tests/nav.test.ts 护栏）：
+// 首页只精确匹配语言根（zh `/`、en `/en/`），否则 `/en/*`（项目站 `/repo/*` 同理）
+// 会被前缀匹配吞掉，导致「导航栏多个高亮」。
 const base = basePath().replace(/\/+$/, '');
 
-const isActive = (p: string) => {
-  const target = (base + withLang(p, lang)).replace(/\/+$/, '') || '/';
-  if (target === '/') return path === '/' || path === base;
-  return path === target || path.startsWith(target + '/');
-};
+const isActive = (p: string) =>
+  isNavActive(Astro.url.pathname, { target: base + withLang(p, lang), isHome: p === '/' });
 ---
 
 <header class="site-header">
