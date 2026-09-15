@@ -114,6 +114,32 @@ export const IDENTIFIERS: Record<string, string> = {
 };
 
 /**
+ * 结构化数据（JSON-LD Person）所需的学术身份字段（语言中立，机构用规范英文名便于知识图谱关联）。
+ * 仅经 BaseLayout.astro 的 JSON-LD 使用，不进页面渲染。
+ */
+export const ACADEMIC = {
+  /** 当前职称（按语言） */
+  jobTitle: { zh: '讲师', en: 'Lecturer' },
+  /** 当前所属机构（规范英文名，便于知识图谱关联） */
+  affiliation: 'National University of Defense Technology',
+  /** 曾就读机构（规范英文名） */
+  alumniOf: [
+    'Tsinghua University',
+    'National University of Defense Technology',
+    'The University of Manchester',
+  ],
+  /** 研究关键词（英文为主，便于国际检索） */
+  knowsAbout: [
+    '2D materials',
+    'Graphene',
+    'Proton transport',
+    'Ion transport',
+    'Optoelectronics',
+    'Van der Waals heterostructures',
+  ],
+} as const;
+
+/**
  * 侧边栏 / 首页展示的联系方式。icon 取值见 src/components/Icon.astro
  * 经 src/lib/content.ts 门面使用；直接 import 仅为门面底层实现
  */

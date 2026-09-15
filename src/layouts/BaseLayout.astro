@@ -6,9 +6,9 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import SearchModal from '../components/SearchModal.astro';
 import BackToTop from '../components/BackToTop.astro';
-import { SITE } from '../site.config';
+import { SITE, PROFILE, IDENTIFIERS, ACADEMIC, profile } from '../site.config';
 import { absolute, url, stripBase } from '../lib/url';
-import { getLangFromUrl, LANG_TAG } from '../i18n';
+import { getLangFromUrl, LANG_TAG, withLang } from '../i18n';
 import { ClientRouter } from 'astro:transitions';
 
 interface Props {
@@ -40,8 +40,45 @@ const localeDesc = lang === 'en' ? SITE.descriptionEn : SITE.description;
 const resolvedDescription = description === SITE.description && lang === 'en' ? localeDesc : description;
 const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
 const canonical = absolute(stripBase(Astro.url.pathname), SITE.url);
-const ogImage = image ? absolute(image, SITE.url) : undefined;
+
+// hreflang 双语配对：以「去语言前缀 + 去 base」的中性路径为锚，生成 zh-CN / en / x-default 三条等价链接
+const neutral = stripBase(Astro.url.pathname).replace(/^\/en(\/|$)/, '/') || '/';
+const zhHref = absolute(neutral, SITE.url);
+const enHref = absolute(withLang(neutral, 'en'), SITE.url);
+
+// OG 图片：页面传入则用之，否则回退全站默认社交卡片（永远输出绝对 URL）
+const ogImage = image ? absolute(image, SITE.url) : absolute('/og.png', SITE.url);
 const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
+
+// 结构化数据：文章页输出 BlogPosting（含作者），其余页输出完整学术 Profile（Person）
+const isArticle = ogType === 'article';
+const jsonLd = isArticle
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: title ?? SITE.title,
+      url: canonical,
+      description: resolvedDescription,
+      inLanguage: LANG_TAG[lang],
+      datePublished: publishedTime ? publishedTime.toISOString() : undefined,
+      keywords: tags.join(', '),
+      author: { '@type': 'Person', name: profile(lang).name, url: absolute('/about/', SITE.url) },
+    }
+  : {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: profile(lang).name,
+      alternateName: PROFILE.nameEn,
+      url: canonical,
+      description: resolvedDescription,
+      inLanguage: LANG_TAG[lang],
+      jobTitle: ACADEMIC.jobTitle[lang],
+      affiliation: { '@type': 'Organization', name: ACADEMIC.affiliation },
+      alumniOf: ACADEMIC.alumniOf.map((n) => ({ '@type': 'Organization', name: n })),
+      knowsAbout: ACADEMIC.knowsAbout,
+      email: `mailto:${PROFILE.email}`,
+      sameAs: Object.values(IDENTIFIERS).filter((v) => /^https?:/.test(v)),
+    };
 ---
 
 <!doctype html>
@@ -55,19 +92,28 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
     <link rel="canonical" href={canonical} />
     {noIndex && <meta name="robots" content="noindex,nofollow" />}
 
+    {/* hreflang 双语配对：告知搜索引擎中/英两版互为等价页；x-default 指向默认语言（中文） */}
+    <link rel="alternate" hreflang="zh-CN" href={zhHref} />
+    <link rel="alternate" hreflang="en" href={enHref} />
+    <link rel="alternate" hreflang="x-default" href={zhHref} />
+
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title ?? SITE.title} />
     <meta property="og:description" content={resolvedDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={SITE.title} />
     <meta property="og:locale" content={localeTag} />
-    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={SITE.title} />
     {publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
     {tags.map((t) => <meta property="article:tag" content={t} />)}
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title ?? SITE.title} />
     <meta name="twitter:description" content={resolvedDescription} />
+    <meta name="twitter:image" content={ogImage} />
 
     <link rel="alternate" type="application/rss+xml" title={SITE.title} href={absolute('/rss.xml', SITE.url)} />
     <link rel="sitemap" href={absolute('/sitemap-index.xml', SITE.url)} />
@@ -78,14 +124,7 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
 
     <meta name="generator" content={Astro.generator} />
 
-    <script is:inline type="application/ld+json" set:html={JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': ogType === 'article' ? 'BlogPosting' : 'Person',
-      name: title ?? SITE.title,
-      url: canonical,
-      description: resolvedDescription,
-      inLanguage: LANG_TAG[lang],
-    })} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
 
   <body

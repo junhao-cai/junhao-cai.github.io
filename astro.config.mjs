@@ -36,7 +36,17 @@ export default defineConfig({
   prefetch: { prefetchAll: true, defaultStrategy: 'viewport' },
   integrations: [
     vue(),
-    sitemap({ changefreq: 'monthly', priority: 0.7 }),
+    sitemap({
+      changefreq: 'monthly',
+      priority: 0.7,
+      // 双语 sitemap：为每个 URL 生成 xhtml:link 形式的 hreflang 等价链接（zh-CN / en）
+      i18n: {
+        defaultLocale: 'zh',
+        locales: { zh: 'zh-CN', en: 'en' },
+      },
+      // 404 页不参与索引，排除出 sitemap（配合页面 noindex 双保险）
+      filter: (page) => !page.includes('/404'),
+    }),
   ],
   markdown: {
     remarkPlugins: [
