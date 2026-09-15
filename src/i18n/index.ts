@@ -165,6 +165,8 @@ const DICT = {
     'footer.sitemap': '站点地图',
     'footer.builtWith': '基于 Astro 构建',
     'footer.backTop': '回到顶部',
+    'footer.visits': '总访问量',
+    'footer.visitors': '总访客数',
   },
 
   en: {
@@ -281,6 +283,8 @@ const DICT = {
     'footer.sitemap': 'Sitemap',
     'footer.builtWith': 'Built with Astro',
     'footer.backTop': 'Back to top',
+    'footer.visits': 'Visits',
+    'footer.visitors': 'Visitors',
   },
 } as const;
 

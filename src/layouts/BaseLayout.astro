@@ -73,6 +73,9 @@ const localeTag = lang === 'en' ? 'en_US' : 'zh_CN';
     <link rel="sitemap" href={absolute('/sitemap-index.xml', SITE.url)} />
     <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
 
+    {/* 不蒜子访问量统计：第三方计数服务，脚本由 ibruce.info 提供；is:inline 保证不被 Astro 打包改写 */}
+    <script is:inline async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
     <meta name="generator" content={Astro.generator} />
 
     <script is:inline type="application/ld+json" set:html={JSON.stringify({

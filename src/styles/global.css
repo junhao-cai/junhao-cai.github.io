@@ -1380,6 +1380,17 @@ blockquote.callout.is-folded > *:not(.callout-title) {
   color: var(--c-accent);
 }
 
+/* 不蒜子计数标签：中英两版都渲染，由 <html lang> 选择显示（zh-CN / en）。
+   计数容器带 transition:persist，跨 ViewTransitions 换页时保留的是「旧节点」，
+   节点内文案不会随新页更新——只用当前语言渲染会在 SPA 切语言后残留旧语言标签。 */
+.busuanzi__label {
+  display: none;
+}
+html[lang^='zh'] .busuanzi__label[lang='zh'],
+html[lang='en'] .busuanzi__label[lang='en'] {
+  display: inline;
+}
+
 /* -------------------------------------------------------------- misc -- */
 
 .muted {

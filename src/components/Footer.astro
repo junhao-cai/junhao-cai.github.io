@@ -5,13 +5,22 @@ import { getLangFromUrl, useT, withLang } from '../i18n';
 import Icon from './Icon.astro';
 
 const t = useT(getLangFromUrl(Astro.url));
+// 计数标签双语渲染、按 <html lang> 由 CSS 选择显示（见 global.css .busuanzi__label）：
+// 计数容器经 transition:persist 跨 ViewTransitions 换页保留的是「旧节点」，数值得以保留，
+// 但节点内文案不会随新页更新——只渲染当前语言会在 SPA 切语言后残留旧语言标签。
+const tZh = useT('zh');
+const tEn = useT('en');
 const year = new Date().getFullYear();
 const range = year > SITE.sinceYear ? `${SITE.sinceYear}–${year}` : `${SITE.sinceYear}`;
 ---
 
 <footer class="site-footer">
   <div class="wrap site-footer__inner">
-    <span>© {range} {SITE.title.split('·')[0].trim()} · {t('footer.builtWith')}</span>
+    <span>© {range} {SITE.title.split('·')[0].trim()} · {t('footer.builtWith')}
+      <span class="busuanzi" transition:persist>
+        <span id="busuanzi_container_site_pv" style="display:none"> · <span class="busuanzi__label" lang="zh">{tZh('footer.visits')}</span><span class="busuanzi__label" lang="en">{tEn('footer.visits')}</span> <span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none"> · <span class="busuanzi__label" lang="zh">{tZh('footer.visitors')}</span><span class="busuanzi__label" lang="en">{tEn('footer.visitors')}</span> <span id="busuanzi_value_site_uv"></span></span>
+      </span>
+    </span>
     <span style="display:inline-flex;gap:0.9rem;align-items:center">
       <a href={url('/rss.xml')} title={t('footer.rss')} style="display:inline-flex;align-items:center;gap:.3rem">
         <Icon name="rss" size={14} /> RSS
