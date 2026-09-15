@@ -24,7 +24,7 @@ const notReady = lang === 'en'
   : 'Pagefind 索引尚未生成：npm run build → npm run postbuild:search';
 ---
 
-<BaseLayout title={t('search.title')} description={t('search.title')} wide>
+<BaseLayout title={t('search.title')} description={t('search.title')} wide noIndex>
   <header class="post-head">
     <h1>{t('search.title')}</h1>
     <p class="muted" style="margin:.4rem 0 0">{intro}</p>

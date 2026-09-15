@@ -44,8 +44,8 @@ export default defineConfig({
         defaultLocale: 'zh',
         locales: { zh: 'zh-CN', en: 'en' },
       },
-      // 404 页不参与索引，排除出 sitemap（配合页面 noindex 双保险）
-      filter: (page) => !page.includes('/404'),
+      // 404 页与站内搜索页（纯客户端、无正文）均为 noindex，排除出 sitemap（避免与 noindex 信号冲突）
+      filter: (page) => !page.includes('/404') && !page.includes('/search'),
     }),
   ],
   markdown: {
